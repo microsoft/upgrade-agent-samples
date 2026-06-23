@@ -1,0 +1,10 @@
+{
+  "id": "upgrade-fabrikam",
+  "displayName": "Fabrikam Suite Upgrade",
+  "version": "1.0.0",
+  "traits": ".NET|CSharp|VisualBasic|DotNetCore",
+  "mcp": {
+    "command": "dnx",
+    "args": ["Fabrikam.Upgrade.Mcp", "--yes"]
+  }
+}

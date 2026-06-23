@@ -1,0 +1,29 @@
+{
+  "name": "upgrade-fabrikam",
+  "displayName": "Fabrikam Suite Upgrade",
+  "description": "Sample VS Code extension that contributes the Fabrikam Suite Upgrade extender to the GitHub Copilot modernization agent.",
+  "publisher": "fabrikam",
+  "version": "1.0.0",
+  "license": "MIT",
+  "engines": { "vscode": "^1.95.0" },
+  "categories": ["Other"],
+  "main": "./extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "upgradeExtensions": [
+      {
+        "id": "upgrade-fabrikam",
+        "manifest": "./upgrade-extension.json",
+        "skills": "./skills",
+        "mcp": [
+          {
+            "label": "Fabrikam-Upgrade",
+            "transport": "dnx",
+            "package": "Fabrikam.Upgrade.Mcp",
+            "prerelease": true
+          }
+        ]
+      }
+    ]
+  }
+}

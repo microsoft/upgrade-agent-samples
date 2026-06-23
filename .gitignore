@@ -1,0 +1,17 @@
+# Build output
+bin/
+obj/
+
+# Node / VS Code
+node_modules/
+*.vsix
+
+# Editors
+.vs/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# OS
+.DS_Store
+Thumbs.db

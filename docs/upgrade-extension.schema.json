@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://aka.ms/modernize/extension-schema/v1.json",
+  "title": "Upgrade extension manifest",
+  "description": "Manifest for `upgrade-extension.json` at the plugin's root. Identifies a plugin folder as an extension for the Upgrade orchestrator. The orchestrator scans the rest of the plugin folder for skills; under the proxy model the optional `mcp` field tells the orchestrator how to spawn the extender's MCP, and `enabled` / `traits` / `tools` gate which tools surface to the LLM. See doc/modernization-agent/extension-mcp-contract.md.",
+  "type": "object",
+  "required": ["id", "displayName", "version"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{2,63}$",
+      "description": "Globally unique extension id. Doubles as the Copilot CLI plugin id and as the value scenarios use in `requires-extension`."
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human-readable name shown in diagnostic output and (future) marketplace listings."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+([-+][0-9A-Za-z.-]+)?$",
+      "description": "SemVer of the extension itself, independent of the orchestrator version."
+    },
+    "mcp": {
+      "type": "object",
+      "description": "Optional spawn instructions for this extender's MCP. Required under the proxy model when the extender ships any tools. Omit when the extender contributes skills only.",
+      "required": ["command"],
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Executable to launch (e.g. `upgrade-dotnet-mcp` for a packed dotnet tool, or `dotnet` with arguments pointing at a DLL during in-repo testing)."
+        },
+        "args": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Arguments passed verbatim to the child. Path elements may use the `${pluginRoot}` token; the orchestrator substitutes the manifest's plugin root at spawn time."
+        },
+        "workingDirectory": {
+          "type": ["string", "null"],
+          "description": "Optional working directory for the child. Same `${pluginRoot}` substitution applies. Defaults to the orchestrator's cwd when null."
+        }
+      }
+    },
+    "enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Extender-level kill switch. Default true. Set to false to disable the entire extender — the orchestrator will not spawn it and none of its tools will surface, regardless of `traits`."
+    },
+    "traits": {
+      "type": ["string", "null"],
+      "description": "Optional trait expression gating which of the extender's tools the orchestrator surfaces. Evaluated against the orchestrator's resolved ITraitsSet when building `tools/list`, and re-checked at `tools/call` as defense in depth. Until the trait set has resolved the listing is permissive (every spawned extender's tools show); once traits are known the gate is applied. This gates tool *visibility* only — it does not by itself stop the extender from being spawned (use `enabled: false` for that). Grammar: atom (`X`), OR (`X | Y`), AND (`X & Y` or `X + Y`), NOT (`!X`), parentheses. Case-insensitive. Null / empty = always applies."
+    },
+    "skills": {
+      "description": "Optional skill-root path(s) relative to the plugin root. When present, these roots are loaded in addition to the default `skills/` and `upgrade/skills/` directory-convention lookups — all skill layers are merged and skill-id collisions are deduped by the aggregator. Use to ship skills under a non-conventional folder or to expose multiple skill roots (e.g. shared base + scenario-specific). Paths that resolve outside the plugin root are rejected.",
+      "oneOf": [
+        { "type": "null" },
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1
+        }
+      ]
+    },
+    "tools": {
+      "type": "object",
+      "description": "Optional per-tool gate overrides. Keys are the extender's own unprefixed tool names. Tools not listed inherit only the extender-level gates. A tool listed here is visible IFF the extender-level `enabled` + `traits` allow AND the per-tool `enabled` + `traits` allow (intersection).",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "Per-tool kill switch. Default true. Set to false to hide a specific tool unconditionally."
+          },
+          "traits": {
+            "type": ["string", "null"],
+            "description": "Optional additional trait expression layered on top of the extender-level expression. Same grammar."
+          }
+        }
+      }
+    }
+  }
+}

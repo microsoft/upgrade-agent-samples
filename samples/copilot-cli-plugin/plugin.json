@@ -1,0 +1,8 @@
+{
+  "name": "upgrade-fabrikam",
+  "version": "1.0.0",
+  "description": "Fabrikam Suite Upgrade — sample modernization extender that migrates the Fabrikam component suite from v3 to v4 (package renames + version bumps). Reference implementation of the Upgrade extender contract.",
+  "author": { "name": "Fabrikam" },
+  "license": "MIT",
+  "keywords": ["modernize", "copilot", "upgrade", "modernization", "dotnet", "nuget"]
+}
