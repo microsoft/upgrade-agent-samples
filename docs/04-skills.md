@@ -5,7 +5,9 @@ single `SKILL.md` Markdown file: a **metadata header** (YAML front matter) that
 tells the orchestrator *when* the skill applies, plus a **Markdown body** the
 agent follows.
 
-Skills live under your extender's `skills/` directory, one folder per skill:
+Skills live under your extender's skills directory, one folder per skill. The
+exact path depends on the host — `upgrade/skills/` for a Copilot CLI plugin,
+`skills/` for a VS Code extension:
 
 ```
 skills/

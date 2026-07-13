@@ -14,9 +14,10 @@ packaging.
 copilot-cli-plugin/
 ├── plugin.json                 # Copilot CLI plugin metadata
 ├── upgrade-extension.json    # the extender manifest (see doc 1)
-└── skills/
-    ├── fabrikam-v4-upgrade/SKILL.md
-    └── fabrikam-package-audit/SKILL.md
+└── upgrade/
+    └── skills/
+        ├── fabrikam-v4-upgrade/SKILL.md
+        └── fabrikam-package-audit/SKILL.md
 ```
 
 The plugin ships the manifest and skills. Your MCP server is **not** bundled
