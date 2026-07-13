@@ -106,20 +106,30 @@ time.
 
 ## 1.4 Skills layout
 
-By default the orchestrator looks for skills under your extender folder in this
-order, **merging** every layer that exists:
+The skills folder convention depends on the host:
 
-```
-<extender-root>/
-├── upgrade-extension.json
-└── skills/
-    ├── fabrikam-v4-upgrade/SKILL.md       # a scenario
-    └── fabrikam-package-audit/SKILL.md    # on-demand guidance
-```
+- **Copilot CLI plugin** — place skills under `upgrade/skills/` inside the plugin folder:
 
-It also checks `upgrade/skills/` (a scoped layout some hosts use) and any path
-you list in the manifest's `skills` field. Skill-id collisions across layers are
-de-duplicated. See [doc 4](04-skills.md) for the SKILL.md format.
+  ```
+  <plugin-root>/
+  ├── upgrade-extension.json
+  └── upgrade/
+      └── skills/
+          ├── fabrikam-v4-upgrade/SKILL.md
+          └── fabrikam-package-audit/SKILL.md
+  ```
+
+- **VS Code extension** — place skills under `skills/` at the extension root (declared via `"skills": "./skills"` in the `contributes.upgradeExtensions` entry):
+
+  ```
+  <extension-root>/
+  ├── upgrade-extension.json
+  └── skills/
+      ├── fabrikam-v4-upgrade/SKILL.md
+      └── fabrikam-package-audit/SKILL.md
+  ```
+
+The orchestrator merges skills from every configured path. Skill-id collisions across layers are de-duplicated. See [doc 4](04-skills.md) for the SKILL.md format.
 
 ## 1.5 Traits and gating
 
