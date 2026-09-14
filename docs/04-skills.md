@@ -54,6 +54,9 @@ explicit tool calls (by bare name), and verification checkpoints.
 | `scenario` | Surfaced as a selectable workflow the agent can start. | Complete migration workflows (a "scenario"). |
 | `scenarioExtension` | Injected into a **built-in** scenario that is already running, at the flow points you declare. | Your rules for *your* technology inside somebody else's migration. See [doc 6](06-scenario-extensions.md). |
 
+Two further values, `none` and `system`, are accepted but reserved for
+host-owned skills. As an extender you want one of the four above.
+
 A **scenario** is just a skill with `discovery: scenario`. It represents an
 end-to-end migration the user can pick and the agent can run phase by phase.
 

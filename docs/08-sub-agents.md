@@ -40,7 +40,7 @@ flat, plugin-level folder.
 If your extender *is* the plugin root — which it is for the Copilot CLI sample
 in this repo — `agents/` at the root already **is** that folder, so no copying
 step is needed (you still have to write `user-invocable: false` yourself; see
-[8.3](#83-user-invocable-false-is-mandatory)). Only when an extender folder is
+§8.3](#83-user-invocable-false-is-mandatory)). Only when an extender folder is
 nested inside a larger package do its agent files need to be lifted to the
 package's flat folder.
 
@@ -83,7 +83,7 @@ Name the trigger condition — *when* to reach for it — not just the capabilit
 The other half is making sure something is *inclined* to call it. That is what
 your scenario-extension instructions are for: a scope's instructions can tell
 the running worker that your agent exists and when to delegate to it. See
-[Scenario extensions](./06-scenario-extensions.md). An agent shipped without a
+[doc 6](06-scenario-extensions.md). An agent shipped without a
 matching mention in your instructions is usually an agent that never runs.
 
 ## 8.3 `user-invocable: false` is mandatory
@@ -152,7 +152,7 @@ independent of the MCP your manifest declares.
 ```yaml
 ---
 name: fabrikam-dependency-validation
-description: Validates Fabrikam package graphs against the v4 support matrix.
+description: Validates Fabrikam package graphs against the v4 support matrix. Use before planning a Fabrikam upgrade.
 user-invocable: false
 mcp-servers:
   fabrikam-graph:

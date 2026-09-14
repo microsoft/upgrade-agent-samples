@@ -93,7 +93,7 @@ Full form with an MCP and trait gating:
 | `tools` | No | Per-tool gate overrides keyed by your bare tool names. |
 
 > The full machine-readable schema is mirrored at
-> [`docs/upgrade-extension.schema.json`](upgrade-extension.schema.json). Point your
+> [`upgrade-extension.schema.json`](upgrade-extension.schema.json). Point your
 > editor's JSON validation at it for IntelliSense.
 
 ### The `mcp` block
@@ -124,7 +124,11 @@ order, **merging** every layer that exists:
 ├── skills/
 │   ├── fabrikam-v4-upgrade/SKILL.md       # a scenario
 │   ├── fabrikam-package-audit/SKILL.md    # on-demand guidance
-│   └── fabrikam-controls-rules/SKILL.md   # a scenario extension (doc 6)
+│   └── fabrikam-controls-rules/           # a scenario extension (doc 6)
+│       ├── SKILL.md
+│       └── scopes/                        # per-scope content
+│           ├── assessment.md
+│           └── planning.md
 └── agents/
     └── fabrikam-dependency-validation.agent.md   # optional sub-agent (doc 8)
 ```
@@ -142,10 +146,12 @@ filename-level **discovery traits** (`DotNet`, `Containerized`,
 analysis (`.NET`, `CSharp`, `DotNetCore`, `DotNetFramework`). You use traits in
 two places:
 
-1. **Manifest `traits`** — gates whether your *entire extender* is spawned. The
-   real .NET extender gates on `".NET|CSharp|VisualBasic|DotNetCore"`, so the
-   orchestrator only spawns its MCP for an actual .NET solution. This sample
-   uses the same gate.
+1. **Manifest `traits`** — gates whether your extender's *tools are surfaced*.
+   An extender whose traits don't match stays spawned but contributes no tools,
+   so nothing of yours reaches the model. (Use `enabled: false` to stop it being
+   spawned at all.) A .NET-oriented extender gates on something like
+   `".NET|CSharp|VisualBasic|DotNetCore"`, so its tools appear only for an
+   actual .NET solution. This sample uses the same gate.
 2. **Skill `metadata.traits`** — gates whether an individual *skill* is offered
    to the agent.
 
@@ -179,7 +185,12 @@ A single host package can carry **multiple independent extenders**. Put each one
 in its own self-contained `extenders/<name>/` folder (each with its own
 `upgrade-extension.json` and `skills/`). The orchestrator discovers every nested
 manifest. Keeping each extender self-contained means you can later split one out
-into its own package by moving the folder — no other changes.
+into its own package by moving the folder.
+
+> **Sub-agents are the exception.** Agent files are discovered in one flat,
+> package-level folder, not beside each manifest, so they can't sit inside
+> `extenders/<name>/`. Splitting an extender out means moving its agent files
+> too. See [doc 8 §8.1](08-sub-agents.md#81-where-agent-files-end-up).
 
 ## Next
 

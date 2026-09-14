@@ -24,6 +24,23 @@ so, rather than guessing.
 | `Fabrikam.Windows.Forms.Themes`, any version | **Blocking.** Removed in 8.0; styling moves into `Fabrikam.Windows.Forms` 8.x. No drop-in successor. |
 | Designer files referencing pre-8.0 types | **Needs regeneration** after the package bump. List the affected files. |
 
+## Delegating the graph walk
+
+For anything beyond a handful of projects, hand the dependency walk to the
+`fabrikam-dependency-validation` sub-agent instead of tracing transitive
+references yourself. It runs in its own context, talks to the Fabrikam graph
+server directly, and returns just the verdict table — so the assessment does not
+pay for the intermediate reasoning.
+
+Use it when the solution has more than a few UI projects, when
+`Fabrikam.*` versions disagree across projects, or when a reference is pulled in
+transitively rather than declared. Fall back to the rules above when the graph
+server is unavailable.
+
+> This is the pattern described in
+> [`docs/08-sub-agents.md`](../../../../../docs/08-sub-agents.md): shipping the
+> agent makes it available, but naming it here is what makes it get used.
+
 ## What to record
 
 Record a short **Fabrikam control inventory** section in the assessment — even

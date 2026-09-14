@@ -14,8 +14,9 @@ particular technology by contributing:
   orchestrator already owns.
 - **An MCP server** — an optional process exposing *tools* the agent can call
   to inspect and transform a repository.
-- **Sub-agents** — optional hidden worker agents, each able to declare **its
-  own** MCP server, that run in their own context window.
+- **Sub-agents** — optional hidden worker agents that run in their own context
+  window, each able to declare **its own** MCP server (honoured by Copilot CLI;
+  see [doc 8 §8.4](docs/08-sub-agents.md#84-an-agent-may-declare-its-own-mcp-servers)).
 
 You package an extender for a host:
 
@@ -89,7 +90,8 @@ flowchart LR
    you reference them in skill metadata so your content appears only when
    relevant.
 6. **Sub-agents** — optional hidden workers in `agents/`, each able to bring its
-   own MCP server.
+   own MCP server on Copilot CLI. They are dispatched by name, so an agent's
+   `description` is what decides whether it is ever used.
 
 ## License
 

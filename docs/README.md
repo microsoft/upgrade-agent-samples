@@ -57,7 +57,7 @@ conversation and the code being changed.
 | **Skill** | A `SKILL.md` Markdown file with a metadata header. Either a *scenario* (a workflow), *guidance* (on-demand know-how), or a *scenario extension*. |
 | **Scenario** | A skill with `discovery: scenario` — a complete migration workflow the agent can run. |
 | **Scenario extension** | A skill with `discovery: scenarioExtension` — never user-selectable; it adds your rules to a built-in scenario at the flow points you declare. See [doc 6](06-scenario-extensions.md). |
-| **Scope** | A point in a scenario's flow (`Assessment`, `Planning`, `TaskBreakdown`, `Execution`, `IntegrityReview`, or `Any`) where a scenario extension's content is served. |
-| **Sub-agent** | A hidden `*.agent.md` worker an extender ships in `agents/`, dispatched by the orchestrator and able to declare its own MCP servers. See [doc 8](08-sub-agents.md). |
+| **Scope** | A named point in a scenario's flow where a scenario extension's content is served. The current set, and the `Any` wildcard, are listed in [doc 6 §6.2](06-scenario-extensions.md#62-the-scope-vocabulary). |
+| **Sub-agent** | A hidden `*.agent.md` worker an extender ships in `agents/`, dispatched by name and able to declare its own MCP servers (Copilot CLI). See [doc 8](08-sub-agents.md). |
 | **Tool** | An MCP operation the agent can call (e.g. `detect_fabrikam_packages`). |
 | **Trait** | A boolean fact about the repository discovered by the orchestrator's scan (e.g. `DotNet`) or a project-capability tag used in skill gating (e.g. `DotNetFramework`). |

@@ -191,11 +191,11 @@ remainder to the others. Declaration order never decides who gets trimmed, and
 no single extension can starve the rest. (Truncation markers themselves aren't
 charged, so the rendered output can run marginally over.)
 
-The exact ceiling and line cap are **implementation details that can change**,
-so design to the shape of this behaviour, not to the numbers. At the time of
-writing the ceiling is on the order of 60,000 characters and a partial block
-shows up to about 150 leading lines. Never author to the limit; author so that
-truncation would be survivable.
+The ceiling and the line cap are **implementation details that can change** —
+[doc 7 §7.1](07-instruction-size-and-tokens.md#71-budgets-worth-knowing)
+carries the current figures, and they are the one place to look them up. What
+matters here is the *shape* of what happens when you don't fit. Never author to
+the limit; author so that truncation would be survivable.
 
 An extension that doesn't fit gets its **leading whole lines plus an explicit
 pointer** — the line cap, or fewer if its share allows fewer — never a silent
@@ -309,10 +309,10 @@ way in a few minutes.
 
 > Declaring `extends-scenario`, `scope` or `scopeInstructions` *without* a valid
 > `discovery` — absent, blank, or misspelled — is tolerated: the shape says
-> plainly what the skill is, so it still classifies as an extension rather than
-> being preloaded into every session, and the bad value is logged. For any
-> *other* skill, an unparseable `discovery` fails closed and matches no
-> discovery query at all. Don't lean on the rescue — it is a safety net, not a
+> plainly what the skill is, so it is still classified as an extension, and the
+> bad value is logged. For any *other* skill, an unparseable `discovery` fails
+> closed and matches no discovery query at all. Don't lean on the rescue — it is
+> a safety net, not a
 > second way to declare an extension. Write `discovery: scenarioExtension`.
 
 ## Next

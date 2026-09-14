@@ -35,7 +35,7 @@ Neither sample ships MCP server code — only the **command** to launch a server
 This sample references a published `Fabrikam.Upgrade.Mcp` tool via the `dnx`
 transport. For a local dev loop, swap the `mcp[]` entry for an `exec` transport
 pointing at your own server (see
-[`../../docs/03-vscode-extension.md`](../../docs/03-vscode-extension.md) §3.2).
+[`../../docs/03-vscode-extension.md` §3.2](../../docs/03-vscode-extension.md#32-the-contributesupgradeextensions-contribution-point)).
 
 ## Make it your own
 

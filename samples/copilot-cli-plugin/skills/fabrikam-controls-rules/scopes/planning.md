@@ -2,9 +2,11 @@
 
 Served to the planner at `scope: Planning`.
 
-**Guardrail first:** do not add, remove, rename, or reorder any plan task to
-satisfy this extension. The task list belongs to the scenario. Record the
-decision and the constraints below; nothing more.
+**Stay inside your lane.** Planning guidance may legitimately constrain
+ordering, add a prerequisite task, or contribute an upgrade option — that is
+what this scope is for. What it must not do is restate the scenario's own plan,
+override a choice the user has already made, or weaken a safety rule. Contribute
+the Fabrikam-specific constraints below and leave the rest of the plan alone.
 
 ## Ordering constraints
 
