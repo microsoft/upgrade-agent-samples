@@ -63,9 +63,10 @@ how to launch your MCP from the `mcp` block in `upgrade-extension.json`.
 ### Do **not** ship a visible agent file
 
 Only the orchestrator should appear in the CLI's `/agent` list. Any agent file
-you ship in `agents/` must be a hidden worker — `user-invocable: false`, which
-is enforced rather than merely expected. See [doc 8](08-sub-agents.md). If your
-extender contributes no sub-agent, ship no agent file at all.
+you ship in `agents/` must be a hidden worker, so you must declare
+`user-invocable: false` yourself — an absent key means **visible**, not hidden.
+See [doc 8](08-sub-agents.md). If your extender contributes no sub-agent, ship
+no agent file at all.
 
 ## 2.3 How discovery works on the CLI
 

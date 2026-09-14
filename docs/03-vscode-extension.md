@@ -153,10 +153,13 @@ things rather than one, because **it does not auto-discover agent files**:
    folder — not left nested beside `upgrade-extension.json`.
 2. Each one must be listed in `contributes.chatAgents` in `package.json`.
 
-Every other rule is the same as on the CLI: `user-invocable: false` is enforced,
-names must be globally unique, and an agent's own `mcp-servers` block is staged
-verbatim with no `${...}` substitution. This sample ships no sub-agent; the
-Copilot CLI sample does.
+The rest mostly matches the CLI: you must declare `user-invocable: false`
+yourself, names must be globally unique, and an agent's own `mcp-servers` block
+is staged verbatim with no `${...}` substitution. One VS Code difference worth
+knowing: an agent-local `mcp-servers` block is **not launched by VS Code today**
+— it is honoured by the Copilot CLI agent runtime. Don't build a VS Code-only
+sub-agent around its own server. This sample ships no sub-agent; the Copilot CLI
+sample does.
 
 ## 3.8 Checklist
 

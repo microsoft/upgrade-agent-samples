@@ -81,7 +81,7 @@ All custom fields live under `metadata:` except the top-level `name`,
 | `name` | top level | Yes | Unique skill id (kebab-case). Referenced by other skills' `post-completion`. |
 | `description` | top level | Yes | One-to-three sentences. For `lazy` skills this is what the agent matches against — make it specific. |
 | `requires-extension` | top level | Scenarios | The extender id(s) a scenario needs active. See §4.4. |
-| `metadata.discovery` | metadata | No | `lazy` \| `preload` \| `scenario` \| `scenarioExtension`. See §4.2. |
+| `metadata.discovery` | metadata | No | `lazy` \| `preload` \| `scenario` \| `scenarioExtension` \| `none` \| `system`. The last two are reserved for host-owned skills; extenders use the first four. See §4.2. |
 | `metadata.traits` | metadata | No | Trait expression gating the skill against repository traits. See [doc 5](05-skills-metadata-and-traits.md). |
 | `metadata.scenarioTraitsSet` | metadata | Scenarios | Extra traits characterizing this scenario, used when matching it to a repository. List form, e.g. `[.NET]` or `[.NET, DotNetFramework, WebForms]`. |
 | `metadata.importance` | metadata | No | `high` \| `medium` \| `low`. A hint used in ranking. |

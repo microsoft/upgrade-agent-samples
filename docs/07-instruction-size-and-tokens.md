@@ -14,7 +14,7 @@ of when your content loads, not of how much you write.**
 
 | Surface | Bound | What happens at the edge |
 |---------|-------|--------------------------|
-| Scenario-extension response | A **60,000-character ceiling** for the whole response — preamble, wrappers and every matching extension together | Divided by ascending need; an extension that doesn't fit is truncated to **up to 150 leading whole lines** plus a resume pointer, or named as a body-less reference. See [doc 6 §6.5](06-scenario-extensions.md#65-how-the-content-reaches-the-agent). |
+| Scenario-extension response | A **fixed character ceiling** for the whole response — preamble, wrappers and every matching extension together (on the order of 60,000 characters today; treat the exact figure as implementation-defined) | Divided by ascending need; an extension that doesn't fit is truncated to its leading whole lines plus a resume pointer, named as a body-less reference, or — in the worst case — replaced by an omitted-extensions notice. See [doc 6 §6.5](06-scenario-extensions.md#65-how-the-content-reaches-the-agent). |
 | `preload` skills | No hard cap — and that is the danger | Loaded into **every** session where the extender is active, whether relevant or not. |
 | `lazy` skills | No hard cap | Loaded only when the `description` matches the task. The description is the cost you always pay. |
 | Tool descriptions | No hard cap | Every tool's name and description sit in context for the **whole session**. |
@@ -27,7 +27,7 @@ a safety net, not a strategy.
 These are working targets, not enforced limits. Treat a breach as a signal to
 split, not as a failure.
 
-| Content | Target | Hard ceiling before you should split |
+| Content | Target | Point at which you should split |
 |---------|--------|--------------------------------------|
 | Skill `description` | 1–3 sentences | ~50 words |
 | `preload` skill body | ≤ 50 lines | 100 lines — above this, it probably isn't `preload` material |
@@ -104,8 +104,8 @@ Before you ship, for each piece of content:
 - [ ] Is anything here the scenario or the platform already knows?
 - [ ] Does every `preload` skill earn always being in context?
 - [ ] Is each scenario extension scoped to the fewest points that are true?
-- [ ] Is any single file over ~400 lines, or any single line over ~200
-      characters?
+- [ ] Is any single file over ~400 lines, or any single line over the ~100
+      characters targeted above?
 - [ ] Could a long table be a tool call or a referenced file instead?
 - [ ] Does each tool description fit in two sentences?
 
