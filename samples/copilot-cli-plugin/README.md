@@ -17,6 +17,8 @@ Use it as a copy-and-rename starting point. Full authoring docs:
 | `upgrade-extension.json` | The extender manifest: id, version, trait gate (`.NET\|CSharp\|VisualBasic\|DotNetCore`), and the command that launches the MCP. |
 | `skills/fabrikam-v4-upgrade/SKILL.md` | A **scenario** — the full v3 → v4 suite migration workflow. |
 | `skills/fabrikam-package-audit/SKILL.md` | A **lazy** guidance skill loaded on demand. |
+| `skills/fabrikam-controls-rules/` | A **scenario extension** — Fabrikam's control rules injected into the *built-in* .NET version upgrade at `Assessment`, `Planning`, and `IntegrityReview`, with per-scope content under `scopes/`. See [`../../docs/06-scenario-extensions.md`](../../docs/06-scenario-extensions.md). |
+| `agents/fabrikam-dependency-validation.agent.md` | A **sub-agent** — a hidden worker with **its own** `mcp-servers` block. See [`../../docs/08-sub-agents.md`](../../docs/08-sub-agents.md). |
 
 ## What this extender does
 
@@ -69,3 +71,8 @@ skills-only extender can omit the `mcp` block entirely.
 3. Replace the skills with your own scenarios and guidance.
 4. Point the manifest's `mcp.command` at your own MCP server (or drop the `mcp`
    block for a skills-only extender).
+5. Keep or delete `skills/fabrikam-controls-rules/` and `agents/` depending on
+   whether you need a scenario extension or a sub-agent. Both are optional.
+6. Size your content against
+   [`../../docs/07-instruction-size-and-tokens.md`](../../docs/07-instruction-size-and-tokens.md)
+   before shipping.

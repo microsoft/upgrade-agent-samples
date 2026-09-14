@@ -37,13 +37,22 @@ for your extender.
 | Surface | Required? | What it is |
 |---------|-----------|------------|
 | **Manifest** (`upgrade-extension.json`) | Yes | Identifies the folder as an extender; declares id/version, MCP launch, trait gates. |
-| **Skills** (`skills/`) | Recommended | Markdown scenarios and guidance the agent follows. An extender can be skills-only. |
+| **Skills** (`skills/`) | Recommended | Markdown scenarios, on-demand guidance, and **scenario extensions** the agent follows. An extender can be skills-only. |
 | **MCP server** | Optional | A process exposing tools the agent calls. Omit if your extender is skills-only. |
+| **Sub-agents** (`agents/`) | Optional | Hidden `*.agent.md` worker agents the orchestrator dispatches by name. Each may declare **its own** `mcp-servers`. See [doc 8](08-sub-agents.md). |
 | **Hooks** | Reserved | Folder reserved for a future hooks runtime. Not yet active. |
 
 A useful extender is usually **skills + an MCP server**, but **skills-only**
 extenders are fully supported — drop the `mcp` block from the manifest and ship
 no MCP project.
+
+Two skill shapes matter most in practice:
+
+- A **scenario** — a workflow of your own the user can pick ([doc 4](04-skills.md)).
+- A **scenario extension** — your rules injected into a workflow the
+  orchestrator already owns ([doc 6](06-scenario-extensions.md)). If your
+  technology shows up *inside* somebody else's migration, this is the surface
+  you want.
 
 ## 1.3 The manifest: `upgrade-extension.json`
 
@@ -112,9 +121,12 @@ order, **merging** every layer that exists:
 ```
 <extender-root>/
 ├── upgrade-extension.json
-└── skills/
-    ├── fabrikam-v4-upgrade/SKILL.md       # a scenario
-    └── fabrikam-package-audit/SKILL.md    # on-demand guidance
+├── skills/
+│   ├── fabrikam-v4-upgrade/SKILL.md       # a scenario
+│   ├── fabrikam-package-audit/SKILL.md    # on-demand guidance
+│   └── fabrikam-controls-rules/SKILL.md   # a scenario extension (doc 6)
+└── agents/
+    └── fabrikam-dependency-validation.agent.md   # optional sub-agent (doc 8)
 ```
 
 It also checks `upgrade/skills/` (a scoped layout some hosts use) and any path
@@ -174,3 +186,6 @@ into its own package by moving the folder — no other changes.
 - Package for Copilot CLI → [doc 2](02-copilot-cli-plugin.md)
 - Package for VS Code → [doc 3](03-vscode-extension.md)
 - Write skills → [doc 4](04-skills.md)
+- Extend a built-in scenario → [doc 6](06-scenario-extensions.md)
+- Keep it small → [doc 7](07-instruction-size-and-tokens.md)
+- Ship sub-agents → [doc 8](08-sub-agents.md)

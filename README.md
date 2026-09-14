@@ -6,12 +6,16 @@ cloud-migration support.
 
 The Upgrade agent is built around a small **orchestrator** that coordinates
 independent **extenders**. An extender teaches the agent how to modernize a
-particular technology by contributing two things:
+particular technology by contributing:
 
-- **Skills** — Markdown playbooks (scenarios and on-demand guidance) that tell
-  the agent *what* to do and *when*.
+- **Skills** — Markdown playbooks that tell the agent *what* to do and *when*.
+  A skill can be a **scenario** (a workflow of your own), **on-demand guidance**,
+  or a **scenario extension** that injects your rules into a migration the
+  orchestrator already owns.
 - **An MCP server** — an optional process exposing *tools* the agent can call
   to inspect and transform a repository.
+- **Sub-agents** — optional hidden worker agents, each able to declare **its
+  own** MCP server, that run in their own context window.
 
 You package an extender for a host:
 
@@ -33,7 +37,9 @@ packaging differs.
 The samples implement a fictional third-party extender — **"Fabrikam Suite
 Upgrade"** (`upgrade-fabrikam`) — that migrates .NET solutions from the Fabrikam
 v3 component suite to v4 (package renames, a major version bump, and one dropped
-dependency). Treat it as a copy-and-rename starting point: swap in your own id,
+dependency). It also shows a **scenario extension** that adds Fabrikam's control
+rules to a built-in .NET version upgrade, and a **sub-agent** with its own MCP
+server. Treat it as a copy-and-rename starting point: swap in your own id,
 skills, and tools.
 
 ## Quick start
@@ -48,15 +54,23 @@ skills, and tools.
 4. Use [`docs/05-skills-metadata-and-traits.md`](docs/05-skills-metadata-and-traits.md)
    to gate your skills on the right repository traits so they surface at the
    right moments.
+5. If your technology shows up *inside* a migration the agent already knows how
+   to run, contribute a **scenario extension** rather than a scenario of your
+   own → [`docs/06-scenario-extensions.md`](docs/06-scenario-extensions.md).
+6. Before you write much, read
+   [`docs/07-instruction-size-and-tokens.md`](docs/07-instruction-size-and-tokens.md).
+   Everything you ship shares one context window with the user's conversation
+   and the code being changed.
 
-## The five moving parts
+## The moving parts
 
 ```mermaid
 flowchart LR
     subgraph Extender["Your extender"]
         M["upgrade-extension.json<br/>(manifest)"]
-        S["skills/<br/>(scenarios + guidance)"]
+        S["skills/<br/>(scenarios, guidance,<br/>scenario extensions)"]
         T["MCP server<br/>(tools)"]
+        A["agents/<br/>(sub-agents, optional)"]
     end
     P["Host package<br/>(plugin.json / package.json)"] --> Extender
     Extender --> ORCH["Upgrade orchestrator"]
@@ -74,6 +88,8 @@ flowchart LR
 5. **Traits** — facts the orchestrator discovers about the target repository;
    you reference them in skill metadata so your content appears only when
    relevant.
+6. **Sub-agents** — optional hidden workers in `agents/`, each able to bring its
+   own MCP server.
 
 ## License
 

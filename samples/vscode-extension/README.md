@@ -17,6 +17,7 @@ Full authoring docs:
 | `upgrade-extension.json` | The extender manifest: id, version, and trait gate. The MCP launch is supplied by `package.json`'s `mcp[]` for this host. |
 | `skills/fabrikam-v4-upgrade/SKILL.md` | A **scenario** — the full Fabrikam v3 → v4 migration workflow. |
 | `skills/fabrikam-package-audit/SKILL.md` | A **lazy** guidance skill loaded on demand. |
+| `skills/fabrikam-controls-rules/` | A **scenario extension** — Fabrikam's control rules injected into the *built-in* .NET version upgrade at `Assessment`, `Planning`, and `IntegrityReview`, with per-scope content under `scopes/`. See [`../../docs/06-scenario-extensions.md`](../../docs/06-scenario-extensions.md). |
 | `.vscodeignore` | Files excluded from the packaged VSIX. |
 
 ## How it differs from the CLI plugin
@@ -42,3 +43,10 @@ pointing at your own server (see
    in `upgrade-extension.json` and `contributes.upgradeExtensions`.
 2. Point `mcp[].package` at your published MCP tool (or use `exec` for local).
 3. Replace the skills with your own.
+4. Keep or delete `skills/fabrikam-controls-rules/` depending on whether you
+   need a scenario extension. To ship a **sub-agent**, stage its
+   `*.agent.md` into `prompts/` and list it in `contributes.chatAgents` — see
+   [`../../docs/08-sub-agents.md`](../../docs/08-sub-agents.md).
+5. Size your content against
+   [`../../docs/07-instruction-size-and-tokens.md`](../../docs/07-instruction-size-and-tokens.md)
+   before shipping.

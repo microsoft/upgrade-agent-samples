@@ -2,7 +2,7 @@
 
 This page shows how to ship your extender as a **GitHub Copilot CLI plugin**.
 The working example lives in
-[`../../samples/copilot-cli-plugin/`](../../samples/copilot-cli-plugin/).
+[`../samples/copilot-cli-plugin/`](../samples/copilot-cli-plugin/).
 
 Read [doc 1](01-extension-model.md) first — it covers the manifest, skills, and
 trait gating that are shared across hosts. This page only adds the CLI-specific
@@ -14,14 +14,23 @@ packaging.
 copilot-cli-plugin/
 ├── plugin.json                 # Copilot CLI plugin metadata
 ├── upgrade-extension.json    # the extender manifest (see doc 1)
-└── skills/
-    ├── fabrikam-v4-upgrade/SKILL.md
-    └── fabrikam-package-audit/SKILL.md
+├── skills/
+│   ├── fabrikam-v4-upgrade/SKILL.md          # a scenario
+│   ├── fabrikam-package-audit/SKILL.md       # on-demand guidance
+│   └── fabrikam-controls-rules/              # a scenario extension (doc 6)
+│       ├── SKILL.md
+│       └── scopes/{assessment,planning}.md
+└── agents/
+    └── fabrikam-dependency-validation.agent.md   # a sub-agent (doc 8)
 ```
 
 The plugin ships the manifest and skills. Your MCP server is **not** bundled
 here — the manifest's `mcp` block only names a command (e.g. a published `dnx`
 or `npx` package) that the orchestrator launches.
+
+`agents/` is optional, and only present because this sample demonstrates a
+sub-agent. It is the CLI's own flat agent folder, so agent files sit there
+directly — see [doc 8](08-sub-agents.md).
 
 After the user installs the plugin, the CLI extracts it to a folder under its
 installed-plugins directory. The orchestrator scans that directory, finds your
@@ -53,9 +62,10 @@ how to launch your MCP from the `mcp` block in `upgrade-extension.json`.
 
 ### Do **not** ship a visible agent file
 
-Only the orchestrator should appear in the CLI's `/agent` list. Either ship no
-custom-agent file at all (recommended for an extender), or mark any agent file
-`hidden`. The sample ships none.
+Only the orchestrator should appear in the CLI's `/agent` list. Any agent file
+you ship in `agents/` must be a hidden worker — `user-invocable: false`, which
+is enforced rather than merely expected. See [doc 8](08-sub-agents.md). If your
+extender contributes no sub-agent, ship no agent file at all.
 
 ## 2.3 How discovery works on the CLI
 
@@ -106,9 +116,14 @@ never tries to spawn an MCP.
 
 ## 2.6 Checklist
 
-- [ ] `plugin.json` has a unique `name`, no `mcpServers`, no visible agent file.
+- [ ] `plugin.json` has a unique `name` and no `mcpServers`.
 - [ ] `upgrade-extension.json` `id` matches `plugin.json` `name` and is unique.
 - [ ] `mcp.command` resolves on the user's PATH after install (or the block is
       omitted for skills-only).
 - [ ] Skills gate on the right traits (see [doc 5](05-skills-metadata-and-traits.md)).
+- [ ] Any scenario extension declares `scope` — without it, it is never used
+      (see [doc 6](06-scenario-extensions.md)).
+- [ ] Any agent file in `agents/` declares `user-invocable: false` and a
+      uniquely-prefixed name (see [doc 8](08-sub-agents.md)).
 - [ ] Tool names are unique within your extender and ≤ ~40 chars.
+- [ ] Content is sized against [doc 7](07-instruction-size-and-tokens.md).
