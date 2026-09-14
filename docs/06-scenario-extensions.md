@@ -184,29 +184,28 @@ Your content arrives wrapped:
 </scenario_extension>
 ```
 
-The **whole response is allocated against a fixed character ceiling** —
-preamble, wrappers and content together — divided across the matching extensions
-**by ascending need**, so an extension smaller than its equal share releases the
-remainder to the others. Declaration order never decides who gets trimmed, and
-no single extension can starve the rest. (Truncation markers themselves aren't
-charged, so the rendered output can run marginally over.)
+The response is a **shared budget**: preamble, wrappers and every matching
+extension have to fit in it together. It is divided across them **by ascending
+need**, so an extension smaller than its equal share releases the remainder to
+the others. Declaration order never decides who gets trimmed, and no single
+extension can starve the rest.
 
-The ceiling and the line cap are **implementation details that can change** —
-[doc 7 §7.1](07-instruction-size-and-tokens.md#71-budgets-worth-knowing)
-carries the current figures, and they are the one place to look them up. What
-matters here is the *shape* of what happens when you don't fit. Never author to
-the limit; author so that truncation would be survivable.
+The practical consequence is the whole reason this section exists: **keep each
+scope's content small and scoped to the action it serves.** You are sharing
+space with every other extender that matched, so content sized for a generous
+allowance is content that arrives cut in half. Never author to the limit; author
+so that truncation would be survivable.
 
 An extension that doesn't fit gets its **leading whole lines plus an explicit
-pointer** — the line cap, or fewer if its share allows fewer — never a silent
-cut:
+pointer** — never a silent cut. The agent has to go and read the remainder in
+chunks, which costs it a tool call and costs you the certainty that it bothered:
 
 ```text
 <scenario_extension name="…" scope="…" path="…"
-    delivery="partial" shown-lines="150" total-lines="4000">
-…first 150 lines…
-[Truncated at line 150 of 4000. Continue with read("…", offset=150), or search it for the
-package or API you need.]
+    delivery="partial" shown-lines="…" total-lines="…">
+…leading lines…
+[Truncated at line <shown> of <total>. Continue with read("…", offset=<shown>), or search it for
+the package or API you need.]
 </scenario_extension>
 ```
 
@@ -214,15 +213,15 @@ If not even one line fits, the extension degrades to a body-less **reference**
 naming the file, so the worker still learns it exists and can read it:
 
 ```text
-<scenario_extension name="…" scope="…" path="…" delivery="reference" total-lines="4000">
+<scenario_extension name="…" scope="…" path="…" delivery="reference" total-lines="…">
 [Not included: too large to fit. Use read("…") for the package or API you need.]
 </scenario_extension>
 ```
 
-When the budget is so exhausted that even a reference won't fit, the response
-ends instead with a **notice that further extensions were omitted**. That is the
-worst case, and it is the one to design against: an extension you cannot see is
-an extension that cannot influence the run.
+When the budget is exhausted past even that, the response ends with a **notice
+that further extensions were omitted**. That is the worst case, and the one to
+design against: an extension you cannot see is an extension that cannot
+influence the run.
 
 Three consequences for you as an author:
 

@@ -14,7 +14,7 @@ of when your content loads, not of how much you write.**
 
 | Surface | Bound | What happens at the edge |
 |---------|-------|--------------------------|
-| Scenario-extension response | A **fixed character ceiling** for the whole response — preamble, wrappers and every matching extension together (on the order of 60,000 characters today; treat the exact figure as implementation-defined) | Divided by ascending need; an extension that doesn't fit is truncated to its leading whole lines plus a resume pointer, named as a body-less reference, or — in the worst case — replaced by an omitted-extensions notice. See [doc 6 §6.5](06-scenario-extensions.md#65-how-the-content-reaches-the-agent). |
+| Scenario-extension response | Shared across **every** matching extension at once — preamble, wrappers and content together | Your content must be **small and scoped to the action it serves**. If it doesn't fit, only its leading lines are delivered, with a pointer the agent has to follow to read the rest in chunks later. See [doc 6 §6.5](06-scenario-extensions.md#65-how-the-content-reaches-the-agent). |
 | `preload` skills | No hard cap — and that is the danger | Loaded into **every** session where the extender is active, whether relevant or not. |
 | `lazy` skills | No hard cap | Loaded only when the `description` matches the task. The description is the cost you always pay. |
 | Tool descriptions | No hard cap | Every tool's name and description sit in context for the **whole session**. |
@@ -33,8 +33,8 @@ split, not as a failure.
 | `preload` skill body | ≤ 50 lines | 100 lines — above this, it probably isn't `preload` material |
 | `lazy` skill body | 100–300 lines | 500 lines |
 | Scenario body | 200–500 lines | Split detail into referenced files |
-| Scenario-extension body or scope file | **≤ 200 lines** | 400 lines — beyond this, plan for partial delivery and order accordingly |
-| Line length | ≤ 100 characters | A single line longer than an extension's share of the budget can't be shown at all |
+| Scenario-extension body or scope file | **≤ 200 lines** | 400 lines — beyond this, expect partial delivery and order accordingly |
+| Line length | ≤ 100 characters | A very long single line may not be showable at all |
 | Tool description | 1–2 sentences | ~30 words |
 
 ## 7.3 Seven habits that keep content small
