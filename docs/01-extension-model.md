@@ -61,9 +61,7 @@ the agent. Pick per piece of content — most extenders ship a mix:
   else's migration, this is the surface you want
   ([doc 6](06-scenario-extensions.md)).
 
-The first two carry your everyday guidance; the last two decide whether you own
-a workflow or contribute to one. All four are covered in
-[doc 4](04-skills.md).
+All four are covered in [doc 4](04-skills.md).
 
 ## 1.3 The manifest: `upgrade-extension.json`
 

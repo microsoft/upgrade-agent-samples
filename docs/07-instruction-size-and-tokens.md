@@ -2,13 +2,12 @@
 
 Everything an extender contributes — skill bodies, scenario-extension content,
 tool descriptions, tool results — lands in a **shared context window** alongside
-the orchestrator's own instructions, the user's conversation, and the code the
-agent is reading. Context is the scarcest resource in the system. Content that
-is too long doesn't just cost money and latency; it **pushes out the content
-that would have mattered**, including your own.
+the orchestrator's instructions, the user's conversation, and the code the agent
+is reading. Content that is too long doesn't just cost money and latency; it
+**pushes out the content that would have mattered**, including your own.
 
-The single rule underneath everything on this page: **make relevance a property
-of when your content loads, not of how much you write.**
+The rule underneath everything here: **make relevance a property of when your
+content loads, not of how much you write.**
 
 ## 7.1 Budgets worth knowing
 
@@ -63,18 +62,17 @@ better when it *isn't* truncated.
 **5. Move enumerations out of context.** A 900-row package table doesn't belong
 inline. Two better shapes:
 
-- **A tool.** If your MCP already knows the mapping, expose
-  `lookup_fabrikam_package(name)` and let the agent ask about the five packages
-  the repo actually uses instead of reading about 900 it doesn't.
-- **A referenced file.** Keep a short, decisive body that names the file and
-  says how to search it. The agent can `read` it on demand. State the guardrail
-  in the body ("do not infer a policy for a package not listed in that file")
-  so it holds even when the file hasn't been read.
+- **A tool.** Expose `lookup_fabrikam_package(name)` and let the agent ask about
+  the five packages the repo actually uses instead of reading about 900 it
+  doesn't.
+- **A referenced file.** Keep a short body that names the file and says how to
+  search it. State the guardrail in the body ("do not infer a policy for a
+  package not listed in that file") so it holds even before the file is read.
 
 **6. Write for an agent, not for a reader.** Cut marketing copy, product
-history, rationale the agent can't act on, and prose restating what a table
-already says. Prefer imperative steps, tables, and short before/after snippets.
-One worked example beats three near-identical ones.
+history, rationale the agent can't act on, and prose restating a table. Prefer
+imperative steps, tables, and short before/after snippets. One worked example
+beats three near-identical ones.
 
 **7. Don't restate the platform.** The scenario already knows how to run a .NET
 version upgrade. Say only what changes *because of your product*. If a paragraph
@@ -89,7 +87,7 @@ called.
   choose better than thirty with 60-word ones.
 - **Descriptions state what and when**, not how. `"List every Fabrikam.* package
   reference and its version. Use before planning a v4 migration."` — done.
-- **Bound the results.** A tool that can return a whole repository's worth of
+- **Bound the results.** A tool that could return a whole repository's worth of
   output should paginate, cap, or summarize. A tool result is context spent at
   the worst moment: mid-task.
 - **Keep names short** (≤ ~40 characters) and unique within your extender. See

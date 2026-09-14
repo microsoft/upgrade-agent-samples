@@ -27,19 +27,18 @@ so, rather than guessing.
 ## Delegating the graph walk
 
 For anything beyond a handful of projects, hand the dependency walk to the
-`fabrikam-dependency-validation` sub-agent instead of tracing transitive
+`fabrikam-dependency-validation` sub-agent rather than tracing transitive
 references yourself. It runs in its own context, talks to the Fabrikam graph
-server directly, and returns just the verdict table — so the assessment does not
-pay for the intermediate reasoning.
+server directly, and returns just the verdict table — so the assessment never
+pays for the intermediate reasoning.
 
-Use it when the solution has more than a few UI projects, when
+Reach for it when the solution has more than a few UI projects, when
 `Fabrikam.*` versions disagree across projects, or when a reference is pulled in
-transitively rather than declared. Fall back to the rules above when the graph
-server is unavailable.
+transitively. Fall back to the rules above if the graph server is unavailable.
 
-> This is the pattern described in
+> This is the pattern in
 > [`docs/08-sub-agents.md`](../../../../../docs/08-sub-agents.md): shipping the
-> agent makes it available, but naming it here is what makes it get used.
+> agent makes it available, naming it here is what gets it used.
 
 ## What to record
 

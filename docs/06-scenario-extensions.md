@@ -1,14 +1,12 @@
 # 6. Scenario extensions
 
-A **scenario extension** is a skill that *adds to a scenario the orchestrator
-already owns*, instead of defining a workflow of its own.
+A **scenario extension** adds your rules to a scenario the orchestrator already
+owns, instead of defining a workflow of its own.
 
-This is the surface to use when you own a technology that appears **inside
-somebody else's migration** — a control library, a package family, an API
-surface. The orchestrator's built-in scenarios (for example, a .NET version
-upgrade) only know platform defaults. Everything you know about *your* product —
-your deprecations, your replacements, your support policy — has to arrive as a
-scenario extension.
+Use it when you own a technology that appears **inside somebody else's
+migration** — a control library, a package family, an API surface. Built-in
+scenarios know only platform defaults; everything specific to your product has
+to arrive this way.
 
 ```mermaid
 flowchart LR
@@ -85,20 +83,16 @@ in the flow. Your `scope` decides which of those requests you answer.
 | `IntegrityReview` | the code-reviewer | Correctness rules for reviewing the resulting change. |
 | `Any` | every scope | Guidance that genuinely applies throughout. **Must stand alone** — listed next to named scopes it would make them meaningless, so the named ones win and the `Any` is dropped with a warning. A `scope` value only, never a `scopeInstructions` key. |
 
-A scope can be requested by **more than one worker**. `Assessment` and
-`Execution` in particular are each asked for by multiple workers — for example,
-`Execution` content is served both when work is being applied and when a failure
-is being fixed. Write for the scope's *purpose*, not for one imagined caller.
-
-Scopes are **free-form strings**, matched case-insensitively. A scope nothing
-asks for is simply inert — it costs nothing, and it starts working if that scope
-is wired later. The table above is the set wired today.
+Scopes are **free-form strings**, matched case-insensitively, and more than one
+worker can ask for the same one — `Execution` content is served both when work
+is applied and when a failure is fixed. Write for the scope's *purpose*, not for
+one imagined caller. A scope nothing asks for is inert, and starts working if
+that scope is wired later.
 
 Pick the narrowest set that is true. Content is served **per request, not once
-per run**: a worker asks at the moment it needs it, and some workers run
-repeatedly — `Execution` is requested on every task. A broadly-scoped extension
-is therefore loaded many times over a single scenario, and spends budget every
-time (see [doc 7](07-instruction-size-and-tokens.md)).
+per run** — `Execution` is requested on every task — so a broadly-scoped
+extension is loaded many times over and spends budget every time
+([doc 7](07-instruction-size-and-tokens.md)).
 
 ## 6.3 `scope` and `extends-scenario` treat "absent" differently
 
@@ -113,24 +107,19 @@ If you want "everywhere" behaviour for scope, write it out: `scope: Any`.
 
 ### Finding the scenario id to target
 
-`extends-scenario` matches the scenario's **id**, and a name that doesn't match
-any scenario simply never fires — silently, because nothing is wrong with your
-skill, it just never applies. Since scenario ids are owned by whatever ships the
-scenario, don't guess one:
+`extends-scenario` matches the scenario's **id**. A name that matches nothing
+fails silently — your skill is valid, it just never applies — so don't guess:
 
-- **Read it from the scenario you're extending.** A scenario's own skill
-  declares its id; that is the authoritative spelling, and it is what you copy.
-- **Confirm empirically before you invest.** Ship a deliberately obvious
-  one-line `Assessment` scope first and check it appears in a real run. Getting
-  the id wrong and getting the `scope` wrong look identical from the outside, so
-  prove the id works before layering real content on it.
-- **If your guidance is genuinely cross-cutting, omit the field.** Review rules
-  that hold regardless of the upgrade being performed don't need an id at all —
-  and omitting is safer than pinning the wrong one.
+- **Copy it from the scenario you're extending.** Its own skill declares the
+  authoritative spelling.
+- **Prove it before you invest.** Ship one obvious line at `Assessment` and
+  confirm it appears in a real run. A wrong id and a wrong `scope` look
+  identical from outside.
+- **Omit it if your guidance is cross-cutting.** Review rules that hold for any
+  upgrade don't need an id, and omitting beats pinning the wrong one.
 
-> The samples in this repo use `dotnet-version-upgrade` as an illustrative
-> placeholder. Verify the id in your target environment rather than assuming
-> this one.
+> The samples use `dotnet-version-upgrade` as an illustrative placeholder.
+> Verify the id in your own environment.
 
 ## 6.4 `scopeInstructions` — different content at different points
 
@@ -147,34 +136,28 @@ skills/fabrikam-controls-rules/
 
 Rules:
 
-- It **never turns a scope on.** A key naming a scope you didn't declare in
-  `scope` is never served — you are filtered out at that scope before any
-  content is resolved, so your root body doesn't appear there either. The one
-  exception is `scope: Any`, which already applies everywhere, so it may map
-  any scope an agent queries.
-- **`Any` is not a valid key.** It is a `scope` value only. A `scopeInstructions`
-  entry keyed `Any` is ignored with a warning, because a scope you don't map is
-  already served your root body.
-- **There is no catch-all key.** A scope you don't map is already served your
-  `SKILL.md` body. Put shared guidance there, or map the same file to each scope
-  it belongs to.
-- Paths are **relative to the skill folder**, and paths that escape it are
-  rejected.
-- If a mapped file is missing, unreadable, or empty it is **skipped with a
-  warning**, and the remaining mapped files are still served. Only when **none**
-  of a scope's files can be read does that scope **fall back to your root body**.
-  You declared the scope; a mistyped path must not leave you worse off than
-  mapping nothing.
-- An extension is dropped only when it has no text anywhere.
-- A scope mapped to **several** files is concatenated. That makes truncation
-  non-resumable (§6.5) — map **one file per scope** if you want it resumable.
+- It **never turns a scope on.** A key naming a scope missing from `scope` is
+  never served — you're filtered out at that scope before content is resolved,
+  so your root body doesn't appear there either. The exception is `scope: Any`,
+  which already applies everywhere and may map any scope.
+- **`Any` is not a valid key** — it is a `scope` value only. Keyed entries are
+  ignored with a warning.
+- **There is no catch-all key.** An unmapped scope already gets your `SKILL.md`
+  body. Put shared guidance there, or map the same file to several scopes.
+- Paths are **relative to the skill folder**; paths that escape it are rejected.
+- A missing, unreadable, or empty file is **skipped with a warning** and the
+  rest of that scope is still served. Only when **none** of a scope's files can
+  be read does it **fall back to your root body** — a mistyped path must not
+  leave you worse off than mapping nothing. An extension is dropped only when it
+  has no text anywhere.
+- A scope mapped to **several** files is concatenated, which makes truncation
+  non-resumable (§6.5). Map **one file per scope** if you want it resumable.
 
 ## 6.5 How the content reaches the agent
 
-Each worker pulls what it needs, at the moment it needs it. You never wire
-anything: workers ask unconditionally, and "no extensions apply" is a **success**,
-not an error. Which scenario is active is tracked by the run itself — you never
-pass a scenario id anywhere, and there is no hook for you to register.
+Each worker pulls what it needs, when it needs it. You wire nothing, and "no
+extensions apply" is a **success**, not an error. The run tracks which scenario
+is active; you never pass a scenario id or register a hook.
 
 Your content arrives wrapped:
 
@@ -185,20 +168,18 @@ Your content arrives wrapped:
 ```
 
 The response is a **shared budget**: preamble, wrappers and every matching
-extension have to fit in it together. It is divided across them **by ascending
-need**, so an extension smaller than its equal share releases the remainder to
-the others. Declaration order never decides who gets trimmed, and no single
-extension can starve the rest.
+extension must fit together. It is divided **by ascending need**, so an
+extension smaller than its equal share releases the remainder. Declaration order
+never decides who gets trimmed, and no extension can starve the rest.
 
-The practical consequence is the whole reason this section exists: **keep each
-scope's content small and scoped to the action it serves.** You are sharing
-space with every other extender that matched, so content sized for a generous
-allowance is content that arrives cut in half. Never author to the limit; author
-so that truncation would be survivable.
+Hence the rule this whole section exists to support: **keep each scope's content
+small and scoped to the action it serves.** You share space with every other
+extender that matched, so content sized for a generous allowance arrives cut in
+half.
 
-An extension that doesn't fit gets its **leading whole lines plus an explicit
-pointer** — never a silent cut. The agent has to go and read the remainder in
-chunks, which costs it a tool call and costs you the certainty that it bothered:
+An extension that doesn't fit gets its **leading whole lines plus a pointer** —
+never a silent cut. The agent must then read the remainder in chunks, which
+costs a tool call and costs you the certainty that it bothered:
 
 ```text
 <scenario_extension name="…" scope="…" path="…"
@@ -225,16 +206,15 @@ influence the run.
 
 Three consequences for you as an author:
 
-1. **Cuts land on line boundaries**, so a partial table or list can't read as a
-   complete one, and the resume offset is exact.
-2. **A complete block carries none of these markers.** Their presence *is* the
-   signal that more exists.
-3. **Put the decisive content first.** A policy table's guardrail row ("do not
-   infer a policy for a package not listed here") belongs *above* the table, not
-   below it, so it survives a partial delivery.
+1. **Cuts land on line boundaries**, so a partial table can't read as a complete
+   one, and the resume offset is exact.
+2. **A complete block carries no markers.** Their presence *is* the signal that
+   more exists.
+3. **Put the decisive content first.** A guardrail row ("do not infer a policy
+   for a package not listed here") belongs *above* the table it guards, so it
+   survives a partial delivery.
 
-Keep lines to a readable length and this machinery stays invisible. See
-[doc 7](07-instruction-size-and-tokens.md) for sizing guidance.
+See [doc 7](07-instruction-size-and-tokens.md) for sizing guidance.
 
 ## 6.6 Contributing an upgrade option (`Planning`)
 
@@ -257,41 +237,35 @@ Use this for a decision only the user can make.
 
 ## 6.7 Rules and boundaries
 
-- **Extension guidance is additive, and additive is not powerless.** It cannot
+- **Extension guidance is additive, but additive is not powerless.** It cannot
   override safety rules, the user's explicit instructions, or replace the
-  scenario's own instructions. Within those limits, Planning-scope guidance
-  legitimately *may* add or reorder tasks, constrain the strategy, or contribute
-  an upgrade option — that is what the scope is for. What you cannot do is
-  redefine the scenario itself or override a decision the user already made.
+  scenario's own. Within those limits, Planning-scope guidance *may* add or
+  reorder tasks, constrain the strategy, or contribute an upgrade option — that
+  is what the scope is for.
 - **`order` does not arbitrate conflicts.** It fixes the sequence blocks are
-  served in, nothing more. Where two extenders give genuinely incompatible
-  instructions for the same code, the correct outcome is for the agent to
-  surface the conflict as a decision — not to take whichever block sorted last.
-  If your guidance only holds under conditions, say so in the text.
-- **A block never says who packaged it.** It carries the skill's name and the
-  path its content came from. Which extender shipped it is distribution
-  plumbing; don't write guidance that depends on the agent knowing your brand
-  from the wrapper. Say it in the body if it matters.
-- **Your `Assessment` guidance can shape the assessment report.** State plainly
-  what you want recorded, and where. If you name a destination file, your
-  content goes there and nowhere else. Don't name a path inside the report's own
-  `assessment/` folder — the orchestrator owns and rewrites that tree. A file of
-  your own belongs beside the report.
+  served in, nothing more. Where two extenders give incompatible instructions
+  for the same code, the agent should surface the conflict as a decision, not
+  take whichever sorted last. If your guidance only holds under conditions, say
+  so in the text.
+- **A block never says who packaged it.** It carries the skill's name and source
+  path, not your brand. Say it in the body if it matters.
+- **Your `Assessment` guidance can shape the report.** State what you want
+  recorded and where. Don't name a path inside the report's own `assessment/`
+  folder — the orchestrator owns and rewrites that tree. A file of your own
+  belongs beside the report.
 - **A skill folder is trusted content**, but only its own files: mapped paths
-  that escape the folder are rejected.
+  that escape it are rejected.
 
 ## 6.8 When it doesn't work
 
-Authoring mistakes **fail quietly by design** — a broken extension makes itself
-inert rather than derailing somebody else's upgrade. That is good for users and
-awkward for you: nothing crashes, your content simply never appears. Every one
-of these is logged with the skill name, so raise the host's log verbosity and
-search the output for your skill's `name` — that string is your fastest signal.
+Authoring mistakes **fail quietly by design** — a broken extension goes inert
+rather than derailing somebody else's upgrade. Good for users, awkward for you:
+nothing crashes, your content simply never appears.
 
-If you can't get at the logs, bisect instead. Reduce the skill to a single
-scope, a short literal body, and no `scopeInstructions`, confirm *that* appears,
-then add one piece back at a time. Most of the table below is diagnosable this
-way in a few minutes.
+Each of these is logged with the skill name, so raise the host's log verbosity
+and search for your skill's `name`. If you can't reach the logs, bisect: reduce
+the skill to one scope and a short literal body with no `scopeInstructions`,
+confirm that appears, then add pieces back.
 
 | Symptom | Likely cause |
 |---------|--------------|

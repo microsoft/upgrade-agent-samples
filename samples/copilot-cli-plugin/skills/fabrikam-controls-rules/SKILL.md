@@ -41,18 +41,16 @@ never user-selectable. It adds Fabrikam's rules to the scenario named in
 
 Two things to change when you copy this sample:
 
-- **`extends-scenario: [dotnet-version-upgrade]` is an illustrative
-  placeholder.** Confirm the real scenario id in your target environment. An id
-  that matches nothing fails silently — the skill is valid, it just never
-  applies. If your guidance is genuinely cross-cutting, omit the field instead
-  of guessing.
-- **`order: 100`** only fixes the sequence in which blocks are presented when
-  several extensions match (ascending; omitted sorts last). It does **not**
-  arbitrate conflicts or grant precedence. 100 is simply a round mid-range value
-  that leaves room on either side — there is nothing special about it.
+- **`extends-scenario: [dotnet-version-upgrade]` is a placeholder.** Confirm the
+  real scenario id in your environment — an id that matches nothing fails
+  silently. If your guidance is cross-cutting, omit the field instead of
+  guessing.
+- **`order: 100`** only fixes presentation sequence when several extensions
+  match (ascending; omitted sorts last). It does **not** arbitrate conflicts.
+  100 is just a round mid-range value.
 
-Note also that `traits` here (`.NET|CSharp|VisualBasic`) gates the skill on the
-repository, which is a separate filter from `extends-scenario` and `scope`. All
-three must be satisfied for this content to be served.
+`traits` (`.NET|CSharp|VisualBasic`) gates on the repository — a separate filter
+from `extends-scenario` and `scope`. All three must pass for this content to be
+served.
 
 See [`docs/06-scenario-extensions.md`](../../../../docs/06-scenario-extensions.md).
