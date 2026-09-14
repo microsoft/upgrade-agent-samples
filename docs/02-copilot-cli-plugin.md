@@ -14,12 +14,13 @@ packaging.
 copilot-cli-plugin/
 ├── plugin.json                 # Copilot CLI plugin metadata
 ├── upgrade-extension.json    # the extender manifest (see doc 1)
-├── skills/
-│   ├── fabrikam-v4-upgrade/SKILL.md          # a scenario
-│   ├── fabrikam-package-audit/SKILL.md       # on-demand guidance
-│   └── fabrikam-controls-rules/              # a scenario extension (doc 6)
-│       ├── SKILL.md
-│       └── scopes/{assessment,planning}.md
+├── upgrade/
+│   └── skills/
+│       ├── fabrikam-v4-upgrade/SKILL.md          # a scenario
+│       ├── fabrikam-package-audit/SKILL.md       # on-demand guidance
+│       └── fabrikam-controls-rules/              # a scenario extension (doc 6)
+│           ├── SKILL.md
+│           └── scopes/{assessment,planning}.md
 └── agents/
     └── fabrikam-dependency-validation.agent.md   # a sub-agent (doc 8)
 ```
@@ -29,8 +30,9 @@ here — the manifest's `mcp` block only names a command (e.g. a published `dnx`
 or `npx` package) that the orchestrator launches.
 
 `agents/` is optional, and only present because this sample demonstrates a
-sub-agent. It is the CLI's own flat agent folder, so agent files sit there
-directly — see [doc 8](08-sub-agents.md).
+sub-agent. Note it sits at the **plugin root, not under `upgrade/`**: it is the
+CLI's own flat agent folder, so agent files go there directly — see
+[doc 8](08-sub-agents.md).
 
 After the user installs the plugin, the CLI extracts it to a folder under its
 installed-plugins directory. The orchestrator scans that directory, finds your
@@ -94,8 +96,8 @@ orchestrator to pick it up on its next launch.
 
 If your extender contributes only skills, remove the `mcp` block from
 `upgrade-extension.json`. The plugin then ships just `plugin.json`,
-`upgrade-extension.json`, and `skills/`. The orchestrator loads the skills and
-never tries to spawn an MCP.
+`upgrade-extension.json`, and `upgrade/skills/`. The orchestrator loads the
+skills and never tries to spawn an MCP.
 
 ## 2.5 Local development loop
 

@@ -5,12 +5,15 @@ single `SKILL.md` Markdown file: a **metadata header** (YAML front matter) that
 tells the orchestrator *when* the skill applies, plus a **Markdown body** the
 agent follows.
 
-Skills live under your extender's `skills/` directory, one folder per skill:
+Skills live under your extender's skills directory, one folder per skill. The
+exact path depends on the host — `upgrade/skills/` for a Copilot CLI plugin,
+`skills/` for a VS Code extension:
 
 ```
-skills/
+<skills-dir>/
 ├── fabrikam-v4-upgrade/SKILL.md        # a scenario (a full workflow)
-└── fabrikam-package-audit/SKILL.md     # on-demand guidance
+├── fabrikam-package-audit/SKILL.md     # on-demand guidance
+└── fabrikam-controls-rules/SKILL.md    # a scenario extension (doc 6)
 ```
 
 > This page covers the SKILL.md format and every metadata field. For the

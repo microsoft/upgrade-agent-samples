@@ -2,8 +2,7 @@
 
 An extender can contribute **sub-agents** — hidden worker agents the
 orchestrator dispatches by name — by dropping `*.agent.md` files in an `agents/`
-folder beside your `upgrade-extension.json`, mirroring the sibling `skills/`
-convention.
+folder beside your `upgrade-extension.json`.
 
 A sub-agent is the right tool when a job is **specialized, bulky, and separable**:
 it runs in its **own context window**, so whatever it reads and reasons over
@@ -14,10 +13,11 @@ surface that costs the main agent nothing.
 
 ```text
 <extender-root>/
-├── upgrade-extension.json     # manifest (doc 1)
-├── skills/<skill>/SKILL.md    # discovered in place (doc 4)
-├── agents/<name>.agent.md     # a sub-agent
-└── tools/<file>               # optional helper files for your agents
+├── upgrade-extension.json      # manifest (doc 1)
+├── upgrade/skills/<skill>/     # CLI skills path; VS Code uses skills/ (doc 1 §1.4)
+│   └── SKILL.md
+├── agents/<name>.agent.md      # a sub-agent
+└── tools/<file>                # optional helper files for your agents
 ```
 
 > **Skills first.** Most extenders need no sub-agent at all. Skills plus a

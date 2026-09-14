@@ -124,27 +124,44 @@ time.
 
 ## 1.4 Skills layout
 
-By default the orchestrator looks for skills under your extender folder in this
-order, **merging** every layer that exists:
+The skills folder convention depends on the host:
 
-```
-<extender-root>/
-├── upgrade-extension.json
-├── skills/
-│   ├── fabrikam-v4-upgrade/SKILL.md       # a scenario
-│   ├── fabrikam-package-audit/SKILL.md    # on-demand guidance
-│   └── fabrikam-controls-rules/           # a scenario extension (doc 6)
-│       ├── SKILL.md
-│       └── scopes/                        # per-scope content
-│           ├── assessment.md
-│           └── planning.md
-└── agents/
-    └── fabrikam-dependency-validation.agent.md   # optional sub-agent (doc 8)
-```
+- **Copilot CLI plugin** — place skills under `upgrade/skills/` inside the plugin folder:
 
-It also checks `upgrade/skills/` (a scoped layout some hosts use) and any path
-you list in the manifest's `skills` field. Skill-id collisions across layers are
-de-duplicated. See [doc 4](04-skills.md) for the SKILL.md format.
+  ```
+  <plugin-root>/
+  ├── upgrade-extension.json
+  ├── upgrade/
+  │   └── skills/
+  │       ├── fabrikam-v4-upgrade/SKILL.md       # a scenario
+  │       ├── fabrikam-package-audit/SKILL.md    # on-demand guidance
+  │       └── fabrikam-controls-rules/           # a scenario extension (doc 6)
+  │           ├── SKILL.md
+  │           └── scopes/                        # per-scope content
+  │               ├── assessment.md
+  │               └── planning.md
+  └── agents/
+      └── fabrikam-dependency-validation.agent.md   # optional sub-agent (doc 8)
+  ```
+
+- **VS Code extension** — place skills under `skills/` at the extension root (declared via `"skills": "./skills"` in the `contributes.upgradeExtensions` entry):
+
+  ```
+  <extension-root>/
+  ├── upgrade-extension.json
+  └── skills/
+      ├── fabrikam-v4-upgrade/SKILL.md
+      ├── fabrikam-package-audit/SKILL.md
+      └── fabrikam-controls-rules/
+          ├── SKILL.md
+          └── scopes/{assessment,planning}.md
+  ```
+
+Note that **sub-agents don't follow the skills path**: they live in a flat,
+plugin-level folder — `agents/` for the CLI, `prompts/` for VS Code — never
+under the skills directory. See [doc 8](08-sub-agents.md).
+
+The orchestrator merges skills from every configured path. Skill-id collisions across layers are de-duplicated. See [doc 4](04-skills.md) for the SKILL.md format.
 
 ## 1.5 Traits and gating
 
@@ -192,9 +209,9 @@ You don't write any of this — it's the contract the orchestrator fulfils:
 
 A single host package can carry **multiple independent extenders**. Put each one
 in its own self-contained `extenders/<name>/` folder (each with its own
-`upgrade-extension.json` and `skills/`). The orchestrator discovers every nested
-manifest. Keeping each extender self-contained means you can later split one out
-into its own package by moving the folder.
+`upgrade-extension.json` and its skills directory). The orchestrator discovers
+every nested manifest. Keeping each extender self-contained means you can later
+split one out into its own package by moving the folder.
 
 > **Sub-agents are the exception.** Agent files are discovered in one flat,
 > package-level folder, not beside each manifest, so they can't sit inside

@@ -53,4 +53,4 @@ Two things to change when you copy this sample:
 from `extends-scenario` and `scope`. All three must pass for this content to be
 served.
 
-See [`docs/06-scenario-extensions.md`](../../../../docs/06-scenario-extensions.md).
+See [`docs/06-scenario-extensions.md`](../../../../../docs/06-scenario-extensions.md).

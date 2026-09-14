@@ -37,7 +37,7 @@ Reach for it when the solution has more than a few UI projects, when
 transitively. Fall back to the rules above if the graph server is unavailable.
 
 > This is the pattern in
-> [`docs/08-sub-agents.md`](../../../../../docs/08-sub-agents.md): shipping the
+> [`docs/08-sub-agents.md`](../../../../../../docs/08-sub-agents.md): shipping the
 > agent makes it available, naming it here is what gets it used.
 
 ## What to record
