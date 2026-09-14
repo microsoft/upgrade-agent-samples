@@ -62,14 +62,25 @@ Discovery is not dispatch. Getting the file into the right folder makes the
 agent *available*; something still has to *call* it, and nothing in the upgrade
 flow calls it on a schedule or by position.
 
-A sub-agent is dispatched **by name, through the host's `agent` tool**, by
-whichever agent is currently running. That has one consequence worth designing
-around:
+A sub-agent is dispatched **by name, through the host's agent-spawning tool**,
+by whichever agent is currently running. So the question you have to answer as
+an author is: what makes that running agent decide to hand work to yours?
 
-> **Your `description` is the trigger.** It is what lands in the `agent` tool's
-> schema, so it is the only thing the calling model sees when deciding whether
-> to hand work over. A vague description means a perfectly good agent is never
-> invoked.
+You have two levers, and they are not equally strong.
+
+**Your skills are the lever that works.** The instructions you ship for a
+scenario are read by the worker that is actually doing the job, at the moment it
+is doing it. When your `Assessment` scope says *"for anything beyond a handful
+of projects, hand the dependency walk to `fabrikam-dependency-validation`"*, you
+have told the right agent, at the right point in the flow, in your own words.
+Nothing else you can ship comes close to that. This is the real reason to pair a
+sub-agent with a scenario extension: the extension is what gets the agent used.
+See [doc 6](06-scenario-extensions.md).
+
+**Your `description` is the weaker, always-on lever.** It is what the calling
+model sees when it enumerates the agents available to it, so a vague description
+can keep a good agent from ever being picked. It is necessary — but on its own
+it is a passive hope that the model connects your agent to the task unprompted.
 
 So write the description as a **selection cue**, not a title:
 
@@ -80,11 +91,10 @@ So write the description as a **selection cue**, not a title:
 
 Name the trigger condition — *when* to reach for it — not just the capability.
 
-The other half is making sure something is *inclined* to call it. That is what
-your scenario-extension instructions are for: a scope's instructions can tell
-the running worker that your agent exists and when to delegate to it. See
-[doc 6](06-scenario-extensions.md). An agent shipped without a
-matching mention in your instructions is usually an agent that never runs.
+Then do the part that actually decides it: **name the agent in the skills that
+run at the points where it should be used**, and say what it is for and when to
+prefer it. An agent shipped without a matching mention in your own instructions
+is usually an agent that never runs.
 
 ## 8.3 `user-invocable: false` is mandatory
 
