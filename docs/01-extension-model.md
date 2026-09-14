@@ -46,13 +46,24 @@ A useful extender is usually **skills + an MCP server**, but **skills-only**
 extenders are fully supported — drop the `mcp` block from the manifest and ship
 no MCP project.
 
-Two skill shapes matter most in practice:
+Skills come in a few shapes, and the shape decides *when* your guidance reaches
+the agent. Pick per piece of content — most extenders ship a mix:
 
-- A **scenario** — a workflow of your own the user can pick ([doc 4](04-skills.md)).
-- A **scenario extension** — your rules injected into a workflow the
-  orchestrator already owns ([doc 6](06-scenario-extensions.md)). If your
-  technology shows up *inside* somebody else's migration, this is the surface
-  you want.
+- **On-demand guidance** (`lazy`) — loaded when the agent matches its
+  description to the task. The workhorse, and the right default for most of
+  what you write.
+- **Always-on rules** (`preload`) — short, broadly-applicable constraints kept
+  in context for every session. Use sparingly; it costs tokens whether or not
+  it's relevant.
+- **A scenario** — an end-to-end workflow of your own that the user can pick.
+- **A scenario extension** — your rules injected into a workflow the
+  orchestrator already owns. If your technology shows up *inside* somebody
+  else's migration, this is the surface you want
+  ([doc 6](06-scenario-extensions.md)).
+
+The first two carry your everyday guidance; the last two decide whether you own
+a workflow or contribute to one. All four are covered in
+[doc 4](04-skills.md).
 
 ## 1.3 The manifest: `upgrade-extension.json`
 
