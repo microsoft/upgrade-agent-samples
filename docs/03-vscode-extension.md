@@ -2,7 +2,7 @@
 
 This page shows how to ship your extender as a **VS Code extension**. The
 working example lives in
-[`../samples/vscode-extension/`](../samples/vscode-extension/).
+[`samples/vscode-extension/`](../samples/vscode-extension/).
 
 Read [doc 1](01-extension-model.md) first for the manifest, skills, and trait
 gating shared across hosts. This page only adds the VS Code-specific packaging.

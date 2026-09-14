@@ -103,9 +103,9 @@ Full form with an MCP and trait gating:
 | `skills` | No | Extra skill-root path(s) relative to the manifest, merged with the conventional `skills/` lookup. |
 | `tools` | No | Per-tool gate overrides keyed by your bare tool names. |
 
-> The full machine-readable schema is mirrored beside these docs, at
-> [`upgrade-extension.schema.json`](upgrade-extension.schema.json) in the `docs/`
-> folder. Point your editor's JSON validation at it for IntelliSense.
+> The full machine-readable schema is mirrored at
+> [`docs/upgrade-extension.schema.json`](upgrade-extension.schema.json). Point
+> your editor's JSON validation at it for IntelliSense.
 
 ### The `mcp` block
 

@@ -2,7 +2,7 @@
 
 This page shows how to ship your extender as a **GitHub Copilot CLI plugin**.
 The working example lives in
-[`../samples/copilot-cli-plugin/`](../samples/copilot-cli-plugin/).
+[`samples/copilot-cli-plugin/`](../samples/copilot-cli-plugin/).
 
 Read [doc 1](01-extension-model.md) first — it covers the manifest, skills, and
 trait gating that are shared across hosts. This page only adds the CLI-specific
