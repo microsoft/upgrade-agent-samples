@@ -151,7 +151,19 @@ things rather than one, because **it does not auto-discover agent files**:
 
 1. The `*.agent.md` files must be staged into the extension's flat `prompts/`
    folder — not left nested beside `upgrade-extension.json`.
-2. Each one must be listed in `contributes.chatAgents` in `package.json`.
+2. Each one must be listed in `contributes.chatAgents` in `package.json`, as an
+   object with a `path` — not a bare string:
+
+```jsonc
+"contributes": {
+  "chatAgents": [
+    { "path": "prompts/fabrikam-dependency-validation.agent.md" }
+  ]
+}
+```
+
+Because the list is checked in, it can't be generated at build time: adding an
+agent file without adding its entry means the agent simply doesn't load.
 
 The rest mostly matches the CLI: you must declare `user-invocable: false`
 yourself, names must be globally unique, and an agent's own `mcp-servers` block
