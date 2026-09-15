@@ -227,13 +227,18 @@ first-party one: it is evaluated at the planning gate, listed under
 ## Upgrade Option
 
 **Fabrikam control pack** — choose `Modern` (default), `Compat`, or `None`.
+All three move to `Fabrikam.Windows.Forms` 8.x, which is mandatory on .NET 8+.
 
-**Plan impact**: `Compat` adds a shim package reference to every UI project and
-keeps the v3 designer surface; `Modern` removes it and requires designer files
-to be regenerated.
+**Plan impact**: `Compat` also adds the compatibility shim, which keeps the v3
+designer surface on top of 8.x so designer files need no regeneration;
+`Modern` omits the shim and requires them to be regenerated.
 ```
 
-Use this for a decision only the user can make.
+Use this for a decision only the user can make — and note that every option
+still satisfies the rule the extension exists to enforce. An option that reads
+as a way to *opt out* of your guardrail is a bug: the scope file is served
+instead of your root body, so the planner may never see the rule stated
+elsewhere.
 
 ## 6.7 Rules and boundaries
 

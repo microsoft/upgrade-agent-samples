@@ -172,10 +172,10 @@ filename-level **discovery traits** (`DotNet`, `Containerized`,
 analysis (`.NET`, `CSharp`, `DotNetCore`, `DotNetFramework`). You use traits in
 two places:
 
-1. **Manifest `traits`** — gates whether your extender's *tools are surfaced*.
-   An extender whose traits don't match stays spawned but contributes no tools,
-   so nothing of yours reaches the model. (Use `enabled: false` to stop it being
-   spawned at all.) A .NET-oriented extender gates on something like
+1. **Manifest `traits`** — gates whether your extender's *tools and skills are
+   surfaced*. An extender whose traits don't match stays spawned but contributes
+   neither, so nothing of yours reaches the model. (Use `enabled: false` to stop
+   it being spawned at all.) A .NET-oriented extender gates on something like
    `".NET|CSharp|VisualBasic|DotNetCore"`, so its tools appear only for an
    actual .NET solution. This sample uses the same gate.
 2. **Skill `metadata.traits`** — gates whether an individual *skill* is offered

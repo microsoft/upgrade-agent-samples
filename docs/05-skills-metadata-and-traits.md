@@ -44,13 +44,17 @@ There are **two families** of trait names you can gate on:
 
 ### In the manifest (`upgrade-extension.json`)
 
-Gate whether your *entire extender* is spawned (this is the real .NET extender's
-gate, which the sample reuses):
+Gate whether your extender's *tools and skills are surfaced* (this is the real
+.NET extender's gate, which the sample reuses):
 
 ```jsonc
 { "id": "upgrade-fabrikam", "displayName": "...", "version": "1.0.0",
   "traits": ".NET|CSharp|VisualBasic|DotNetCore" }
 ```
+
+An extender whose traits don't match still gets spawned — it just contributes
+nothing, so none of its tools or skills reach the model. To stop it being
+spawned at all, use `enabled: false`. See [doc 1 §1.5](01-extension-model.md#15-traits-and-gating).
 
 ### In a skill (`SKILL.md`)
 

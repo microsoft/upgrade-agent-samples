@@ -8,7 +8,7 @@ so, rather than guessing.
 
 ## What to detect
 
-1. Every `Fabrikam.Windows.Forms` reference — in `.csproj`
+1. Every `Fabrikam.Windows.Forms` reference — in `.csproj` / `.vbproj`
    `<PackageReference>` items, a central `Directory.Packages.props`, or a legacy
    `packages.config` — together with its version.
 2. Any `*.Designer.cs` / `*.Designer.vb` file referencing a
