@@ -58,7 +58,9 @@ spawned at all, use `enabled: false`. See [doc 1 §1.5](01-extension-model.md#15
 
 ### In a skill (`SKILL.md`)
 
-Gate whether an individual skill is offered:
+Gate whether an individual skill is offered. This is **ANDed** with the manifest
+gate above — a skill is offered only when both evaluate true, and an empty
+expression on either side passes:
 
 ```yaml
 metadata:

@@ -172,14 +172,16 @@ filename-level **discovery traits** (`DotNet`, `Containerized`,
 analysis (`.NET`, `CSharp`, `DotNetCore`, `DotNetFramework`). You use traits in
 two places:
 
-1. **Manifest `traits`** — gates whether your extender's *tools and skills are
-   surfaced*. An extender whose traits don't match stays spawned but contributes
-   neither, so nothing of yours reaches the model. (Use `enabled: false` to stop
-   it being spawned at all.) A .NET-oriented extender gates on something like
+1. **Manifest `traits`** — the outer gate. It decides whether your extender's
+   *tools and skills are surfaced at all*. An extender whose traits don't match
+   stays spawned but contributes neither. (Use `enabled: false` to stop it being
+   spawned at all.) A .NET-oriented extender gates on something like
    `".NET|CSharp|VisualBasic|DotNetCore"`, so its tools appear only for an
    actual .NET solution. This sample uses the same gate.
-2. **Skill `metadata.traits`** — gates whether an individual *skill* is offered
-   to the agent.
+2. **Skill `metadata.traits`** — an inner gate that narrows further. It is
+   **ANDed** with the manifest gate, so a skill is offered only when *both*
+   evaluate true; an empty expression on either side passes. A skill can't
+   escape the manifest gate by declaring traits of its own.
 
 Trait expressions support `|` (OR), `&` / `+` (AND), `!` (NOT), and parentheses,
 and are case-insensitive — e.g. `"(.NET|CSharp|VisualBasic) & DotNetFramework"`.
