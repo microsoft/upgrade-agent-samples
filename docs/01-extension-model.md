@@ -37,13 +37,31 @@ for your extender.
 | Surface | Required? | What it is |
 |---------|-----------|------------|
 | **Manifest** (`upgrade-extension.json`) | Yes | Identifies the folder as an extender; declares id/version, MCP launch, trait gates. |
-| **Skills** (`skills/`) | Recommended | Markdown scenarios and guidance the agent follows. An extender can be skills-only. |
+| **Skills** (`skills/`) | Recommended | Markdown scenarios, on-demand guidance, and **scenario extensions** the agent follows. An extender can be skills-only. |
 | **MCP server** | Optional | A process exposing tools the agent calls. Omit if your extender is skills-only. |
+| **Sub-agents** (`agents/`) | Optional | Hidden `*.agent.md` worker agents the orchestrator dispatches by name. Each may declare **its own** `mcp-servers`. See [doc 8](08-sub-agents.md). |
 | **Hooks** | Reserved | Folder reserved for a future hooks runtime. Not yet active. |
 
 A useful extender is usually **skills + an MCP server**, but **skills-only**
 extenders are fully supported — drop the `mcp` block from the manifest and ship
 no MCP project.
+
+Skills come in a few shapes, and the shape decides *when* your guidance reaches
+the agent. Pick per piece of content — most extenders ship a mix:
+
+- **On-demand guidance** (`lazy`) — loaded when the agent matches its
+  description to the task. The workhorse, and the right default for most of
+  what you write.
+- **Always-on rules** (`preload`) — short, broadly-applicable constraints kept
+  in context for every session. Use sparingly; it costs tokens whether or not
+  it's relevant.
+- **A scenario** — an end-to-end workflow of your own that the user can pick.
+- **A scenario extension** — your rules injected into a workflow the
+  orchestrator already owns. If your technology shows up *inside* somebody
+  else's migration, this is the surface you want
+  ([doc 6](06-scenario-extensions.md)).
+
+All four are covered in [doc 4](04-skills.md).
 
 ## 1.3 The manifest: `upgrade-extension.json`
 
@@ -84,8 +102,8 @@ Full form with an MCP and trait gating:
 | `tools` | No | Per-tool gate overrides keyed by your bare tool names. |
 
 > The full machine-readable schema is mirrored at
-> [`docs/upgrade-extension.schema.json`](upgrade-extension.schema.json). Point your
-> editor's JSON validation at it for IntelliSense.
+> [`docs/upgrade-extension.schema.json`](upgrade-extension.schema.json). Point
+> your editor's JSON validation at it for IntelliSense.
 
 ### The `mcp` block
 
@@ -113,10 +131,17 @@ The skills folder convention depends on the host:
   ```
   <plugin-root>/
   ├── upgrade-extension.json
-  └── upgrade/
-      └── skills/
-          ├── fabrikam-v4-upgrade/SKILL.md
-          └── fabrikam-package-audit/SKILL.md
+  ├── upgrade/
+  │   └── skills/
+  │       ├── fabrikam-v4-upgrade/SKILL.md       # a scenario
+  │       ├── fabrikam-package-audit/SKILL.md    # on-demand guidance
+  │       └── fabrikam-controls-rules/           # a scenario extension (doc 6)
+  │           ├── SKILL.md
+  │           └── scopes/                        # per-scope content
+  │               ├── assessment.md
+  │               └── planning.md
+  └── agents/
+      └── fabrikam-dependency-validation.agent.md   # optional sub-agent (doc 8)
   ```
 
 - **VS Code extension** — place skills under `skills/` at the extension root (declared via `"skills": "./skills"` in the `contributes.upgradeExtensions` entry):
@@ -126,8 +151,15 @@ The skills folder convention depends on the host:
   ├── upgrade-extension.json
   └── skills/
       ├── fabrikam-v4-upgrade/SKILL.md
-      └── fabrikam-package-audit/SKILL.md
+      ├── fabrikam-package-audit/SKILL.md
+      └── fabrikam-controls-rules/
+          ├── SKILL.md
+          └── scopes/{assessment,planning}.md
   ```
+
+Note that **sub-agents don't follow the skills path**: they live in a flat,
+plugin-level folder — `agents/` for the CLI, `prompts/` for VS Code — never
+under the skills directory. See [doc 8](08-sub-agents.md).
 
 The orchestrator merges skills from every configured path. Skill-id collisions across layers are de-duplicated. See [doc 4](04-skills.md) for the SKILL.md format.
 
@@ -140,12 +172,16 @@ filename-level **discovery traits** (`DotNet`, `Containerized`,
 analysis (`.NET`, `CSharp`, `DotNetCore`, `DotNetFramework`). You use traits in
 two places:
 
-1. **Manifest `traits`** — gates whether your *entire extender* is spawned. The
-   real .NET extender gates on `".NET|CSharp|VisualBasic|DotNetCore"`, so the
-   orchestrator only spawns its MCP for an actual .NET solution. This sample
-   uses the same gate.
-2. **Skill `metadata.traits`** — gates whether an individual *skill* is offered
-   to the agent.
+1. **Manifest `traits`** — the outer gate. It decides whether your extender's
+   *tools and skills are surfaced at all*. An extender whose traits don't match
+   stays spawned but contributes neither. (Use `enabled: false` to stop it being
+   spawned at all.) A .NET-oriented extender gates on something like
+   `".NET|CSharp|VisualBasic|DotNetCore"`, so its tools appear only for an
+   actual .NET solution. This sample uses the same gate.
+2. **Skill `metadata.traits`** — an inner gate that narrows further. It is
+   **ANDed** with the manifest gate, so a skill is offered only when *both*
+   evaluate true; an empty expression on either side passes. A skill can't
+   escape the manifest gate by declaring traits of its own.
 
 Trait expressions support `|` (OR), `&` / `+` (AND), `!` (NOT), and parentheses,
 and are case-insensitive — e.g. `"(.NET|CSharp|VisualBasic) & DotNetFramework"`.
@@ -175,12 +211,20 @@ You don't write any of this — it's the contract the orchestrator fulfils:
 
 A single host package can carry **multiple independent extenders**. Put each one
 in its own self-contained `extenders/<name>/` folder (each with its own
-`upgrade-extension.json` and `skills/`). The orchestrator discovers every nested
-manifest. Keeping each extender self-contained means you can later split one out
-into its own package by moving the folder — no other changes.
+`upgrade-extension.json` and its skills directory). The orchestrator discovers
+every nested manifest. Keeping each extender self-contained means you can later
+split one out into its own package by moving the folder.
+
+> **Sub-agents are the exception.** Agent files are discovered in one flat,
+> package-level folder, not beside each manifest, so they can't sit inside
+> `extenders/<name>/`. Splitting an extender out means moving its agent files
+> too. See [doc 8 §8.1](08-sub-agents.md#81-where-agent-files-end-up).
 
 ## Next
 
 - Package for Copilot CLI → [doc 2](02-copilot-cli-plugin.md)
 - Package for VS Code → [doc 3](03-vscode-extension.md)
 - Write skills → [doc 4](04-skills.md)
+- Extend a built-in scenario → [doc 6](06-scenario-extensions.md)
+- Keep it small → [doc 7](07-instruction-size-and-tokens.md)
+- Ship sub-agents → [doc 8](08-sub-agents.md)

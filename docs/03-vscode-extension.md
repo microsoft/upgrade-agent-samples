@@ -2,7 +2,7 @@
 
 This page shows how to ship your extender as a **VS Code extension**. The
 working example lives in
-[`../../samples/vscode-extension/`](../../samples/vscode-extension/).
+[`samples/vscode-extension/`](../samples/vscode-extension/).
 
 Read [doc 1](01-extension-model.md) first for the manifest, skills, and trait
 gating shared across hosts. This page only adds the VS Code-specific packaging.
@@ -16,8 +16,11 @@ vscode-extension/
 ├── .vscodeignore
 ├── upgrade-extension.json     # the extender manifest (see doc 1)
 └── skills/
-    ├── fabrikam-v4-upgrade/SKILL.md
-    └── fabrikam-package-audit/SKILL.md
+    ├── fabrikam-v4-upgrade/SKILL.md          # a scenario
+    ├── fabrikam-package-audit/SKILL.md       # on-demand guidance
+    └── fabrikam-controls-rules/              # a scenario extension (doc 6)
+        ├── SKILL.md
+        └── scopes/{assessment,planning}.md
 ```
 
 Your VSIX is a **data contribution**: it declares where your manifest, skills,
@@ -141,7 +144,36 @@ extenders — point each entry at its own `./extenders/<name>/upgrade-extension.
 and `./extenders/<name>/skills`. Keep each folder self-contained so it can later
 be split into its own VSIX by moving the folder and its array entry.
 
-## 3.7 Checklist
+## 3.7 Sub-agents in VS Code
+
+If your extender ships sub-agents ([doc 8](08-sub-agents.md)), VS Code needs two
+things rather than one, because **it does not auto-discover agent files**:
+
+1. The `*.agent.md` files must be staged into the extension's flat `prompts/`
+   folder — not left nested beside `upgrade-extension.json`.
+2. Each one must be listed in `contributes.chatAgents` in `package.json`, as an
+   object with a `path` — not a bare string:
+
+```jsonc
+"contributes": {
+  "chatAgents": [
+    { "path": "prompts/fabrikam-dependency-validation.agent.md" }
+  ]
+}
+```
+
+Because the list is checked in, it can't be generated at build time: adding an
+agent file without adding its entry means the agent simply doesn't load.
+
+The rest mostly matches the CLI: you must declare `user-invocable: false`
+yourself, names must be globally unique, and an agent's own `mcp-servers` block
+is staged verbatim with no `${...}` substitution. One VS Code difference worth
+knowing: an agent-local `mcp-servers` block is **not launched by VS Code today**
+— it is honoured by the Copilot CLI agent runtime. Don't build a VS Code-only
+sub-agent around its own server. This sample ships no sub-agent; the Copilot CLI
+sample does.
+
+## 3.8 Checklist
 
 - [ ] `contributes.upgradeExtensions[].id` matches `upgrade-extension.json` `id`.
 - [ ] `activationEvents` is empty and `extension.js` is a no-op.
@@ -149,3 +181,8 @@ be split into its own VSIX by moving the folder and its array entry.
 - [ ] An `mcp[]` entry resolves on the user's machine (published `dnx` package
       for release; `exec` for local dev).
 - [ ] Skills gate on the right traits (see [doc 5](05-skills-metadata-and-traits.md)).
+- [ ] Any scenario extension declares `scope` — without it, it is never used
+      (see [doc 6](06-scenario-extensions.md)).
+- [ ] Any sub-agent is staged to `prompts/` **and** listed in
+      `contributes.chatAgents`.
+- [ ] Content is sized against [doc 7](07-instruction-size-and-tokens.md).

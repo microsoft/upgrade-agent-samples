@@ -33,6 +33,13 @@ after each phase.
 2. Ensure the solution builds and there is a working test command
    (`dotnet test`). If none exists, add a smoke test before changing code.
 
+For anything larger than a handful of projects, or whenever `Fabrikam.*`
+versions disagree across projects, delegate the dependency walk to the
+`fabrikam-dependency-validation` sub-agent rather than tracing transitive
+references here. It works in its own context and returns just the verdict table,
+so this scenario doesn't pay for the intermediate reasoning. Continue with the
+steps below once it reports.
+
 ## 2. Apply the package migration
 
 Call `plan_package_migration` to get the authoritative old → new mapping, then
