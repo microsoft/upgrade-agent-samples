@@ -1,151 +1,135 @@
 # 3. Packaging an extender as a VS Code extension
 
-This page shows how to ship your extender as a **VS Code extension**. The
-working example lives in
-[`../../samples/vscode-extension/`](../../samples/vscode-extension/).
-
-Read [doc 1](01-extension-model.md) first for the manifest, skills, and trait
-gating shared across hosts. This page only adds the VS Code-specific packaging.
+The working example is in
+[`samples/vscode-extension/`](../samples/vscode-extension/).
+Read [doc 1](01-extension-model.md) for the shared manifest and skill contract.
 
 ## 3.1 Folder layout
 
-```
+```text
 vscode-extension/
-├── package.json                # VS Code extension manifest + contribution
-├── extension.js                # a no-op activation entry point
+├── package.json
+├── extension.js
 ├── .vscodeignore
-├── upgrade-extension.json     # the extender manifest (see doc 1)
+├── upgrade-extension.json
 └── skills/
     ├── fabrikam-v4-upgrade/SKILL.md
     └── fabrikam-package-audit/SKILL.md
 ```
 
-Your VSIX is a **data contribution**: it declares where your manifest, skills,
-and MCP launch instructions live, then gets out of the way. It does **not**
-register an MCP server with VS Code — only the orchestrator does that.
+The extension contributes a manifest path for Upgrade content discovery and
+registers its MCP through VS Code's standard MCP provider API.
 
-## 3.2 The `contributes.upgradeExtensions` contribution point
+## 3.2 `package.json`
 
-This is the heart of the VS Code packaging. Declare one entry per extender:
-
-```jsonc
+```json
 {
   "name": "upgrade-fabrikam",
   "displayName": "Fabrikam Suite Upgrade",
   "publisher": "fabrikam",
   "version": "1.0.0",
-  "engines": { "vscode": "^1.95.0" },
+  "engines": { "vscode": "^1.101.0" },
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
-    "upgradeExtensions": [
+    "upgradeExtensions": ["./upgrade-extension.json"],
+    "mcpServerDefinitionProviders": [
       {
-        "id": "upgrade-fabrikam",
-        "manifest": "./upgrade-extension.json",
-        "skills": "./skills",
-        "mcp": [
-          {
-            "label": "Fabrikam-Upgrade",
-            "transport": "dnx",
-            "package": "Fabrikam.Upgrade.Mcp",
-            "prerelease": true
-          }
-        ]
+        "id": "fabrikam.upgrade",
+        "label": "Fabrikam Suite Upgrade"
       }
     ]
   }
 }
 ```
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `id` | Yes | Must equal the `id` in `upgrade-extension.json`. |
-| `manifest` | No | Path to `upgrade-extension.json` relative to the VSIX root. Defaults to `./upgrade-extension.json`. |
-| `skills` | No | Skills directory relative to the VSIX root. Defaults to `./skills`. |
-| `hooks` | No | Reserved (future). Defaults to `./hooks`. |
-| `mcp[]` | Yes if you ship an MCP | One or more launch instructions; the orchestrator picks the first it can run. |
+Each `upgradeExtensions` entry is a path to an Upgrade manifest, relative to the
+VSIX root. The Upgrade host discovers these pointers and loads the manifests and
+their skills.
 
-### `mcp[]` transports
+`mcpServerDefinitionProviders` is VS Code's native MCP contribution point.
+Its provider `id` must match the id registered by `extension.js`. VS Code
+activates the extension when that MCP provider is requested, so no explicit
+activation event is needed. The sample requires VS Code 1.101 or later for the
+stable MCP provider API.
 
-| Transport | Shape | Use when |
-|-----------|-------|----------|
-| `dnx` | `{ label, transport: "dnx", package, prerelease?, source? }` | Your MCP ships as a published .NET tool. Resolved via `dotnet dnx <package>`. |
-| `exec` | `{ label, transport: "exec", command, args? }` | Your MCP is any other process. Use `${extensionPath}` to point inside the installed VSIX. |
+## 3.3 Register the MCP in `extension.js`
 
-Example `exec` entry for a local dev loop:
+```js
+const vscode = require('vscode');
 
-```jsonc
-{
-  "label": "Fabrikam-Upgrade-Dev",
-  "transport": "exec",
-  "command": "dotnet",
-  "args": ["run", "--project", "${extensionPath}/../my-mcp-server", "--"]
-}
+exports.activate = function (context) {
+    context.subscriptions.push(vscode.lm.registerMcpServerDefinitionProvider(
+        'fabrikam.upgrade',
+        {
+            provideMcpServerDefinitions() {
+                return [
+                    new vscode.McpStdioServerDefinition(
+                        'FabrikamUpgrade',
+                        'dnx',
+                        ['Fabrikam.Upgrade.Mcp', '--yes', '--ignore-failed-sources'],
+                        {
+                            PLUGIN_MODE: '1',
+                            INSTALL_SOURCE: 'upgrade-plugin'
+                        },
+                        context.extension.packageJSON.version
+                    )
+                ];
+            }
+        }
+    ));
+};
 ```
 
-> The `exec` `command` can be anything that speaks MCP over stdio (`node`,
-> `python`, a built binary, …). No MCP server code needs to live inside the VSIX
-> — point `exec`/`dnx` at wherever your server actually runs.
+VS Code launches this stdio server and routes calls directly to its tools.
+The `env` argument supplies variables required by your server. Never check in
+credentials. Adding the registration disposable to `context.subscriptions`
+lets VS Code dispose it when the extension is deactivated.
 
-## 3.3 Recommended `package.json` metadata
+The `Fabrikam.Upgrade.Mcp` package is illustrative; replace it with your own
+server. You can use `dnx`, `npx`, `node`, or any other stdio MCP command. For a
+bundled script, resolve its path with
+`vscode.Uri.joinPath(context.extensionUri, 'tools', 'server.js').fsPath`.
 
-- **`activationEvents: []`** — your extension never needs to activate. VS Code
-  reads the contribution point at host startup; no JS runs.
-- **No `extensionDependencies`** — the orchestrator host extension loads
-  independently. Declaring a dependency can prevent your VSIX from loading in
-  some development configurations.
-- **A no-op `extension.js`** is all you need:
+See the [VS Code MCP developer guide](https://code.visualstudio.com/api/extension-guides/ai/mcp)
+for provider APIs, HTTP servers, and authentication.
 
-  ```js
-  exports.activate = function () { /* no-op */ };
-  exports.deactivate = function () { /* no-op */ };
-  ```
+## 3.4 Discovery and tool access
 
-## 3.4 How discovery works in VS Code
+The Upgrade host reads the contributed manifest paths to discover your skills.
+Separately, VS Code invokes your MCP provider and connects to the returned
+server. Manage that server through **MCP: List Servers** and enable its tools
+for the calling agent.
 
-```mermaid
-sequenceDiagram
-    participant VSC as VS Code
-    participant HOST as Upgrade host extension
-    participant ORCH as Orchestrator MCP
-    participant EXT as Your MCP
+Manifest and skill traits gate skills, not MCP registration or tool access.
+Agent tool allowlists must include the domain tools a scenario needs; otherwise
+delegate those calls to an agent with the appropriate access.
 
-    VSC->>HOST: activate
-    HOST->>HOST: enumerate vscode.extensions.all
-    Note over HOST: finds your contributes.upgradeExtensions
-    HOST->>ORCH: register + launch (only MCP VS Code sees)
-    ORCH->>ORCH: read contributed extenders, load skills, eval traits
-    ORCH->>EXT: spawn (from your mcp[] entry)
-    ORCH->>EXT: proxy tools
-```
+Refer to tools in skill prose by their domain name, such as
+`detect_fabrikam_packages`, and identify the owning server (`FabrikamUpgrade`)
+where needed. Use the host's registered tool identifiers when configuring agent
+allowlists; tool naming is host-specific.
 
-The Upgrade host extension collects every contributed extender, hands the list
-to the orchestrator, and the orchestrator does the rest. VS Code never launches
-your MCP directly — only the orchestrator appears in the VS Code MCP UI.
+## 3.5 Skills-only and multiple extenders
 
-## 3.5 A note on tool names in VS Code
+A skills-only VSIX needs the `upgradeExtensions` manifest pointer and its skill
+files. It can omit the MCP provider contribution and activation code when it
+has no other runtime functionality.
 
-VS Code Copilot Chat namespaces every MCP tool it registers as
-`mcp_<serverLabel>_<toolName>`. Because your tools ride through the
-orchestrator, they inherit the orchestrator's label — a tool you expose as
-`detect_fabrikam_packages` reaches the model as
-`mcp_modernization_detect_fabrikam_packages`. The chat UI strips the prefix for
-display. This is a VS Code presentation detail you don't control; **don't rename
-your tools to work around it.** Skill prose should refer to the bare tool name —
-every host resolves it.
+For multiple extenders, list each manifest path in `upgradeExtensions`, for
+example `./extenders/<name>/upgrade-extension.json`, and keep each manifest
+with its own skills. Register any domain servers through native MCP providers.
 
-## 3.6 Multiple extenders & self-discovery
+## 3.6 Local development and checklist
 
-`contributes.upgradeExtensions` is an array, so one VSIX can contribute several
-extenders — point each entry at its own `./extenders/<name>/upgrade-extension.json`
-and `./extenders/<name>/skills`. Keep each folder self-contained so it can later
-be split into its own VSIX by moving the folder and its array entry.
+Replace the MCP command and arguments in `extension.js` with your own published
+server or local invocation, then launch an Extension Development Host. Install
+the Upgrade host extension to exercise scenario discovery. Confirm both the
+scenario and the Fabrikam server's tools are available.
 
-## 3.7 Checklist
-
-- [ ] `contributes.upgradeExtensions[].id` matches `upgrade-extension.json` `id`.
-- [ ] `activationEvents` is empty and `extension.js` is a no-op.
-- [ ] No `extensionDependencies`.
-- [ ] An `mcp[]` entry resolves on the user's machine (published `dnx` package
-      for release; `exec` for local dev).
-- [ ] Skills gate on the right traits (see [doc 5](05-skills-metadata-and-traits.md)).
+- [ ] Each `upgradeExtensions` entry resolves to a packaged Upgrade manifest.
+- [ ] The provider id in `package.json` matches the activation code.
+- [ ] `engines.vscode` supports the MCP APIs you use.
+- [ ] The launch command and environment work on the user's machine.
+- [ ] Workers have access to the tools their skills reference.
+- [ ] Skills gate on the appropriate traits (see [doc 5](05-skills-metadata-and-traits.md)).

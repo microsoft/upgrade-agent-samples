@@ -1,9 +1,25 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 
-// This extender is a pure data contribution. The only thing it provides is the
-// contributes.upgradeExtensions entry in package.json, which the Upgrade host
-// extension reads by enumerating vscode.extensions.all. No activation logic is
-// needed, so activate()/deactivate() are intentional no-ops.
+const vscode = require('vscode');
 
-exports.activate = function () { /* no-op */ };
-exports.deactivate = function () { /* no-op */ };
+exports.activate = function (context) {
+    context.subscriptions.push(vscode.lm.registerMcpServerDefinitionProvider(
+        'fabrikam.upgrade',
+        {
+            provideMcpServerDefinitions() {
+                return [
+                    new vscode.McpStdioServerDefinition(
+                        'FabrikamUpgrade',
+                        'dnx',
+                        ['Fabrikam.Upgrade.Mcp', '--yes', '--ignore-failed-sources'],
+                        {
+                            PLUGIN_MODE: '1',
+                            INSTALL_SOURCE: 'upgrade-plugin'
+                        },
+                        context.extension.packageJSON.version
+                    )
+                ];
+            }
+        }
+    ));
+};

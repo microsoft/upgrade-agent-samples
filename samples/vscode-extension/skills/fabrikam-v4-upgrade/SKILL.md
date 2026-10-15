@@ -66,6 +66,7 @@ apply it across every project and any central `Directory.Packages.props`:
 
 ## Notes
 
-- Tool names above (`detect_fabrikam_packages`, `plan_package_migration`) are
-  the bare names exposed by the `upgrade-fabrikam` MCP; every host resolves them.
+- Tool names above (`detect_fabrikam_packages`, `plan_package_migration`) belong
+  to the host-registered `FabrikamUpgrade` MCP server. The worker executing these
+  steps must have access to those tools; otherwise delegate to a worker that does.
 - Replace the heuristics here with project-specific guidance for your suite.

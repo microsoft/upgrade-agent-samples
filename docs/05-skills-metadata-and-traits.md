@@ -44,13 +44,16 @@ There are **two families** of trait names you can gate on:
 
 ### In the manifest (`upgrade-extension.json`)
 
-Gate whether your *entire extender* is spawned (this is the real .NET extender's
-gate, which the sample reuses):
+Gate the skills contributed by your extender (this is the .NET skill gate the
+sample uses):
 
 ```jsonc
 { "id": "upgrade-fabrikam", "displayName": "...", "version": "1.0.0",
   "traits": ".NET|CSharp|VisualBasic|DotNetCore" }
 ```
+
+This expression filters skills only. MCP registration and tool permissions are
+managed by the host; fact-collection hooks run independently of trait gates.
 
 ### In a skill (`SKILL.md`)
 
@@ -136,8 +139,9 @@ Notes:
   technology is *present*, not the version or framework in use.
 - The scan does not read file contents in its default mode, so it does **not**
   emit per-framework traits like "uses Django 4" — pair a discovery trait with
-  your own MCP tool when you need that precision (your tool runs once your
-  extender is active).
+  your own analysis when you need that precision. Use a `collect_facts` Upgrade
+  hook for facts needed during scenario discovery, or an MCP tool for analysis
+  performed by an agent that has access to the server.
 - New discovery traits may be added over time; existing names are stable.
 
 ## 5.4 Capability traits (framework-level)
@@ -161,8 +165,11 @@ gate: `traits: .NET|CSharp|VisualBasic|DotNetCore`, `scenarioTraitsSet: [.NET]`.
 
 If you extend a **different** ecosystem, define and document your own capability
 vocabulary the same way — declare the tags in your scenarios' `traits` /
-`scenarioTraitsSet`, surface them from your MCP analysis, and document them so
-downstream scenarios can interoperate.
+`scenarioTraitsSet`, emit the repository traits needed for discovery from a
+`collect_facts` Upgrade hook, and document them so downstream scenarios can
+interoperate. Use agent-invoked MCP analysis for checks performed after
+discovery; registering an MCP server does not populate the orchestrator's
+repository trait set.
 
 ## 5.5 Putting it together — worked example
 
@@ -182,9 +189,10 @@ metadata:
 ---
 ```
 
-- `traits: .NET|CSharp|VisualBasic|DotNetCore` ensures the scenario is only
-  offered for an actual .NET solution — so it surfaces at the right moment and is
-  invisible elsewhere.
+- `traits: .NET|CSharp|VisualBasic|DotNetCore` offers the scenario when the
+  resolved trait set includes one of those capabilities. Host defaults can
+  contribute traits too, so confirm actual package/framework applicability
+  during scenario assessment.
 - `scenarioTraitsSet` adds the tag the orchestrator uses to match this scenario
   against the repository's overall character.
 - `weight` orders it ahead of lower-weight comparable scenarios.
@@ -197,5 +205,7 @@ metadata:
 - [ ] Each scenario sets `traits` (availability) **and** `scenarioTraitsSet`
       (characterization).
 - [ ] You use `!` to exclude repositories your content shouldn't touch.
-- [ ] Framework-level precision your scan can't see is provided by an MCP tool,
-      called only after activation.
+- [ ] Framework-level facts needed for discovery come from a `collect_facts`
+      hook; agent-invoked MCP analysis has the required tool access.
+- [ ] MCP registration and tool permissions are configured independently of
+      manifest and skill trait gates.

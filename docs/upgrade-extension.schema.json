@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://aka.ms/modernize/extension-schema/v1.json",
+  "$id": "https://raw.githubusercontent.com/microsoft/upgrade-agent-samples/main/docs/upgrade-extension.schema.json",
   "title": "Upgrade extension manifest",
-  "description": "Manifest for `upgrade-extension.json` at the plugin's root. Identifies a plugin folder as an extension for the Upgrade orchestrator. The orchestrator scans the rest of the plugin folder for skills; under the proxy model the optional `mcp` field tells the orchestrator how to spawn the extender's MCP, and `enabled` / `traits` / `tools` gate which tools surface to the LLM. See doc/modernization-agent/extension-mcp-contract.md.",
+  "description": "Authoring schema for standalone Upgrade extenders using native host MCP registration. The manifest identifies Upgrade content, skill roots, skill trait gates, and optional one-shot Upgrade hooks. Configure MCP servers in the host plugin or agent configuration.",
   "type": "object",
   "required": ["id", "displayName", "version"],
   "additionalProperties": false,
@@ -22,36 +22,14 @@
       "pattern": "^\\d+\\.\\d+\\.\\d+([-+][0-9A-Za-z.-]+)?$",
       "description": "SemVer of the extension itself, independent of the orchestrator version."
     },
-    "mcp": {
-      "type": "object",
-      "description": "Optional spawn instructions for this extender's MCP. Required under the proxy model when the extender ships any tools. Omit when the extender contributes skills only.",
-      "required": ["command"],
-      "additionalProperties": false,
-      "properties": {
-        "command": {
-          "type": "string",
-          "minLength": 1,
-          "description": "Executable to launch (e.g. `upgrade-dotnet-mcp` for a packed dotnet tool, or `dotnet` with arguments pointing at a DLL during in-repo testing)."
-        },
-        "args": {
-          "type": "array",
-          "items": { "type": "string" },
-          "description": "Arguments passed verbatim to the child. Path elements may use the `${pluginRoot}` token; the orchestrator substitutes the manifest's plugin root at spawn time."
-        },
-        "workingDirectory": {
-          "type": ["string", "null"],
-          "description": "Optional working directory for the child. Same `${pluginRoot}` substitution applies. Defaults to the orchestrator's cwd when null."
-        }
-      }
-    },
     "enabled": {
       "type": "boolean",
       "default": true,
-      "description": "Extender-level kill switch. Default true. Set to false to disable the entire extender — the orchestrator will not spawn it and none of its tools will surface, regardless of `traits`."
+      "description": "Enables this extender's Upgrade skills and hooks. Default true. Native host MCP registration and permissions are configured independently."
     },
     "traits": {
       "type": ["string", "null"],
-      "description": "Optional trait expression gating which of the extender's tools the orchestrator surfaces. Evaluated against the orchestrator's resolved ITraitsSet when building `tools/list`, and re-checked at `tools/call` as defense in depth. Until the trait set has resolved the listing is permissive (every spawned extender's tools show); once traits are known the gate is applied. This gates tool *visibility* only — it does not by itself stop the extender from being spawned (use `enabled: false` for that). Grammar: atom (`X`), OR (`X | Y`), AND (`X & Y` or `X + Y`), NOT (`!X`), parentheses. Case-insensitive. Null / empty = always applies."
+      "description": "Optional expression gating all skills from this extender. Does not gate MCP registration, tool calls, or fact-collection hooks. Grammar: atom (`X`), OR (`X | Y`), AND (`X & Y` or `X + Y`), NOT (`!X`), parentheses. Case-insensitive. Null / empty = always applies."
     },
     "skills": {
       "description": "Optional skill-root path(s) relative to the plugin root. When present, these roots are loaded in addition to the default `skills/` and `upgrade/skills/` directory-convention lookups — all skill layers are merged and skill-id collisions are deduped by the aggregator. Use to ship skills under a non-conventional folder or to expose multiple skill roots (e.g. shared base + scenario-specific). Paths that resolve outside the plugin root are rejected.",
@@ -65,21 +43,36 @@
         }
       ]
     },
-    "tools": {
-      "type": "object",
-      "description": "Optional per-tool gate overrides. Keys are the extender's own unprefixed tool names. Tools not listed inherit only the extender-level gates. A tool listed here is visible IFF the extender-level `enabled` + `traits` allow AND the per-tool `enabled` + `traits` allow (intersection).",
+    "upgradeHooks": {
+      "type": ["object", "null"],
+      "description": "Optional one-shot commands keyed by Upgrade hook name. The collect_facts hook reports repository facts and traits. Each command reads one JSON request from stdin, writes one JSON response to stdout, and exits.",
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_-]{2,63}$"
+      },
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
+        "required": ["command"],
         "properties": {
-          "enabled": {
-            "type": "boolean",
-            "default": true,
-            "description": "Per-tool kill switch. Default true. Set to false to hide a specific tool unconditionally."
+          "command": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "Executable or interpreter to run. Supports ${pluginRoot}."
           },
-          "traits": {
+          "args": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Complete hook arguments. Supports ${pluginRoot}."
+          },
+          "workingDirectory": {
             "type": ["string", "null"],
-            "description": "Optional additional trait expression layered on top of the extender-level expression. Same grammar."
+            "description": "Working directory for the hook. Supports ${pluginRoot}. Null uses the orchestrator's working directory."
+          },
+          "timeoutSeconds": {
+            "type": ["integer", "null"],
+            "minimum": 1,
+            "description": "Optional time budget for the entire invocation. Cannot extend the orchestrator's own deadline."
           }
         }
       }

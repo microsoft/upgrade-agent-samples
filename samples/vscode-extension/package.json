@@ -5,24 +5,16 @@
   "publisher": "fabrikam",
   "version": "1.0.0",
   "license": "MIT",
-  "engines": { "vscode": "^1.95.0" },
+  "engines": { "vscode": "^1.101.0" },
   "categories": ["Other"],
   "main": "./extension.js",
   "activationEvents": [],
   "contributes": {
-    "upgradeExtensions": [
+    "upgradeExtensions": ["./upgrade-extension.json"],
+    "mcpServerDefinitionProviders": [
       {
-        "id": "upgrade-fabrikam",
-        "manifest": "./upgrade-extension.json",
-        "skills": "./skills",
-        "mcp": [
-          {
-            "label": "Fabrikam-Upgrade",
-            "transport": "dnx",
-            "package": "Fabrikam.Upgrade.Mcp",
-            "prerelease": true
-          }
-        ]
+        "id": "fabrikam.upgrade",
+        "label": "Fabrikam Suite Upgrade"
       }
     ]
   }

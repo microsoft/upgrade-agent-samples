@@ -14,25 +14,27 @@ afterwards.
 
 ## Concepts in one paragraph
 
-The **orchestrator** is the single MCP server the host (Copilot CLI or VS Code)
-talks to when the user runs the Upgrade agent. On boot it **scans the target
+The **orchestrator** coordinates the Upgrade workflow through its own MCP
+server. On boot it **scans the target
 repository** to produce a set of **traits** (facts like "this repo has .NET"),
 then **discovers extenders** the user has installed. Each **extender** ships a
 **manifest** (`upgrade-extension.json`), a tree of **skills**, and optionally an
 **MCP server** with **tools**. The orchestrator loads the skills into its own
-in-memory registry, spawns the extender MCPs as child processes, and **proxies**
-their tools to the agent. Skills and tools are filtered by traits so the agent
-only ever sees what's relevant to the repository in front of it.
+in-memory registry and filters them by repository traits. Each extender registers
+its optional MCP through the host's standard plugin or agent configuration.
+The host launches that server and routes domain tool calls directly to it.
+MCP availability and tool permissions are controlled by the host and the agent's
+tool configuration, independently of skill trait gates.
 
 ## Terminology
 
 | Term | Meaning |
 |------|---------|
-| **Orchestrator** | The core Upgrade MCP server. The only MCP the host launches directly. You don't build this — you extend it. |
+| **Orchestrator** | The core Upgrade MCP server, which owns workflow coordination, system tools, and skill discovery. You don't build this — you extend it. |
 | **Extender** | Your contribution: a manifest + skills + (optionally) an MCP server. Also called an "extension". |
 | **Host** | The product running the agent: GitHub Copilot CLI or VS Code. |
 | **Host package** | The unit the host installs — a CLI plugin or a VS Code extension — that carries your extender. |
-| **Manifest** | `upgrade-extension.json`. Marks a folder as an extender and declares its id, version, MCP launch, and trait gates. |
+| **Manifest** | `upgrade-extension.json`. Marks a folder as an extender and declares its identity, skill roots, and skill trait gates. |
 | **Skill** | A `SKILL.md` Markdown file with a metadata header. Either a *scenario* (a workflow) or *guidance* (on-demand know-how). |
 | **Scenario** | A skill with `discovery: scenario` — a complete migration workflow the agent can run. |
 | **Tool** | An MCP operation the agent can call (e.g. `detect_fabrikam_packages`). |
