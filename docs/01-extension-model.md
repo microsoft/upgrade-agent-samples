@@ -1,9 +1,9 @@
 # 1. The extension model
 
-This page explains how an extender plugs into the Upgrade agent. The model is
-**host-agnostic**: the same manifest, skills, and tool surface work whether you
-ship a Copilot CLI plugin or a VS Code extension. The host-specific packaging is
-covered in docs [2](02-copilot-cli-plugin.md) and [3](03-vscode-extension.md).
+An extender adds domain-specific skills and optional tools to the Upgrade agent.
+The manifest and skill format are shared across hosts; MCP registration uses
+each host's standard integration. See docs [2](02-copilot-cli-plugin.md) and
+[3](03-vscode-extension.md) for packaging.
 
 ## 1.1 Topology
 
@@ -11,163 +11,122 @@ covered in docs [2](02-copilot-cli-plugin.md) and [3](03-vscode-extension.md).
 flowchart TB
     HOST["Host<br/>(Copilot CLI / VS Code)"]
     ORCH["Upgrade orchestrator MCP"]
-    HOST -- "launches (the only MCP it sees)" --> ORCH
-
-    subgraph Installed["Installed extenders"]
-        E1["upgrade-fabrikam/<br/>upgrade-extension.json<br/>skills/<br/>(MCP)"]
-        E2["other-extender/<br/>upgrade-extension.json<br/>skills/<br/>(MCP)"]
-    end
-
-    ORCH -- "discovers manifests" --> Installed
-    ORCH -- "loads skills into its registry" --> Installed
-    ORCH -- "spawns + proxies MCP" --> E1
-    ORCH -- " " --> E2
-    ORCH -- "scans repo → traits" --> REPO["Target repository"]
-    ORCH -- "proxied tools + filtered skills" --> LLM["Agent / LLM"]
+    EXT["Extender MCP<br/>(optional domain tools)"]
+    CONTENT["Installed extender<br/>upgrade-extension.json + skills/"]
+    HOST -- "registers + launches" --> ORCH
+    HOST -- "registers + launches directly" --> EXT
+    ORCH -- "discovers manifest + loads skills" --> CONTENT
+    ORCH -- "collects repository traits" --> REPO["Target repository"]
+    ORCH -- "system tools + filtered skills" --> LLM["Agent / LLM"]
+    LLM -- "domain tool calls routed by host" --> EXT
 ```
 
-**Key invariant.** The host launches **only the orchestrator**. Your extender's
-MCP server is **never launched by the host directly** — the orchestrator
-discovers your manifest, spawns your MCP as a child process, and proxies its
-tools. This is why the manifest, not the host package, is the source of truth
-for your extender.
+The orchestrator owns workflow coordination, system tools, skills, and scenario
+discovery. Your MCP is an independent server: the host registers it, launches it,
+and routes tool calls directly to it.
 
 ## 1.2 What an extender contributes
 
 | Surface | Required? | What it is |
 |---------|-----------|------------|
-| **Manifest** (`upgrade-extension.json`) | Yes | Identifies the folder as an extender; declares id/version, MCP launch, trait gates. |
-| **Skills** (`skills/`) | Recommended | Markdown scenarios and guidance the agent follows. An extender can be skills-only. |
-| **MCP server** | Optional | A process exposing tools the agent calls. Omit if your extender is skills-only. |
-| **Hooks** | Reserved | Folder reserved for a future hooks runtime. Not yet active. |
+| **Manifest** (`upgrade-extension.json`) | Yes | Identifies the extender and declares optional skill roots and skill trait gates. |
+| **Skills** (`skills/`) | Recommended | Markdown scenarios and on-demand guidance the agent follows. |
+| **MCP server** | Optional | Domain tools, registered through the host's normal MCP integration. |
+| **Upgrade hooks** (`upgradeHooks`) | Optional | One-shot commands the orchestrator invokes to collect repository facts. |
 
-A useful extender is usually **skills + an MCP server**, but **skills-only**
-extenders are fully supported — drop the `mcp` block from the manifest and ship
-no MCP project.
+A skills-only extender needs just its host package, Upgrade manifest, and skills.
+An extender with tools also supplies native MCP registration in its host package
+or, for a CLI agent-scoped server, in a sub-agent's YAML header.
 
 ## 1.3 The manifest: `upgrade-extension.json`
 
-A single JSON file at the root of your extender folder. Minimal form:
+Place this JSON file at the root of your extender folder:
 
-```jsonc
-{
-  "id": "upgrade-fabrikam",
-  "displayName": "Fabrikam Suite Upgrade",
-  "version": "1.0.0"
-}
-```
-
-Full form with an MCP and trait gating:
-
-```jsonc
+```json
 {
   "id": "upgrade-fabrikam",
   "displayName": "Fabrikam Suite Upgrade",
   "version": "1.0.0",
-  "traits": ".NET|CSharp|VisualBasic|DotNetCore",
-  "mcp": {
-    "command": "dnx",
-    "args": ["Fabrikam.Upgrade.Mcp", "--yes"]
-  }
+  "traits": ".NET|CSharp|VisualBasic|DotNetCore"
 }
 ```
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `id` | Yes | Globally unique, lowercase, hyphenated (`^[a-z][a-z0-9-]{2,63}$`). This is the value scenarios reference in `requires-extension`, and the prefix the orchestrator uses on tool-name collisions. |
+| `id` | Yes | Globally unique, lowercase, hyphenated (`^[a-z][a-z0-9-]{2,63}$`). Scenarios reference it in `requires-extension`. |
 | `displayName` | Yes | Human-readable name shown in diagnostics. |
 | `version` | Yes | SemVer of your extender, independent of the orchestrator. |
-| `mcp` | No | How to launch your MCP. Omit for skills-only extenders. See below. |
-| `enabled` | No | Extender-level kill switch (default `true`). |
-| `traits` | No | A trait expression gating the whole extender. Empty/omitted = always applies. See §1.5. |
-| `skills` | No | Extra skill-root path(s) relative to the manifest, merged with the conventional `skills/` lookup. |
-| `tools` | No | Per-tool gate overrides keyed by your bare tool names. |
+| `enabled` | No | Enables Upgrade content and hooks (default `true`). Host MCP registration is configured independently. |
+| `traits` | No | Expression gating all skills from this extender. Empty/omitted means always applicable. |
+| `skills` | No | Extra skill-root path(s) relative to the manifest, merged with the conventional skill directories. |
+| `upgradeHooks` | No | One-shot command definitions keyed by hook name; `collect_facts` collects repository facts and traits. |
 
-> The full machine-readable schema is mirrored at
-> [`docs/upgrade-extension.schema.json`](upgrade-extension.schema.json). Point your
-> editor's JSON validation at it for IntelliSense.
+The [sample authoring schema](upgrade-extension.schema.json) describes this
+manifest shape for standalone extenders using native MCP registration. Configure
+MCP launch commands, arguments, environment variables, and tool permissions in
+the host's MCP configuration. The Upgrade manifest describes Upgrade content.
 
-### The `mcp` block
-
-```jsonc
-"mcp": {
-  "command": "dnx",                        // launcher: dnx, npx, dotnet, node, …
-  "args": ["Fabrikam.Upgrade.Mcp", "--yes"],     // passed verbatim to the child
-  "workingDirectory": null                 // optional; ${pluginRoot} token allowed
-}
-```
-
-`command` + `args` is whatever launches your MCP server over stdio — there is no
-requirement to ship server code alongside the manifest. Common forms: `dnx`
-(a published .NET tool), `npx -y <package>` (a published npm package), or a
-direct `dotnet`/`node` invocation. Path arguments may use the `${pluginRoot}`
-token, which the orchestrator replaces with your extender's folder at spawn
-time.
+Upgrade hooks are independent of MCP registration. Each hook command reads a
+JSON request from stdin, writes one JSON response to stdout, and exits.
+Its definition supplies `command`, optional `args`, `workingDirectory`, and
+`timeoutSeconds`. Hook paths can use `${pluginRoot}` to refer to the folder
+containing the manifest.
 
 ## 1.4 Skills layout
 
-By default the orchestrator looks for skills under your extender folder in this
-order, **merging** every layer that exists:
+The orchestrator merges skills from `skills/`, `upgrade/skills/`, and any
+additional roots listed in `skills`:
 
-```
+```text
 <extender-root>/
 ├── upgrade-extension.json
 └── skills/
-    ├── fabrikam-v4-upgrade/SKILL.md       # a scenario
-    └── fabrikam-package-audit/SKILL.md    # on-demand guidance
+    ├── fabrikam-v4-upgrade/SKILL.md
+    └── fabrikam-package-audit/SKILL.md
 ```
 
-It also checks `upgrade/skills/` (a scoped layout some hosts use) and any path
-you list in the manifest's `skills` field. Skill-id collisions across layers are
-de-duplicated. See [doc 4](04-skills.md) for the SKILL.md format.
+Additional roots must stay inside the extender folder. Skill-id collisions
+across roots are de-duplicated. See [doc 4](04-skills.md) for the skill format.
 
 ## 1.5 Traits and gating
 
-The orchestrator **scans the target repository** on boot and produces a set of
-**traits** — boolean facts about the technologies present. Some are coarse,
-filename-level **discovery traits** (`DotNet`, `Containerized`,
-`Azure`); others are finer **capability traits** surfaced by deeper
-analysis (`.NET`, `CSharp`, `DotNetCore`, `DotNetFramework`). You use traits in
-two places:
+The orchestrator collects repository **traits**: boolean facts about technologies
+present. Broad discovery traits include `DotNet`, `Containerized`, and `Azure`;
+deeper analysis can contribute capability traits such as `.NET`, `CSharp`, and
+`DotNetFramework`.
 
-1. **Manifest `traits`** — gates whether your *entire extender* is spawned. The
-   real .NET extender gates on `".NET|CSharp|VisualBasic|DotNetCore"`, so the
-   orchestrator only spawns its MCP for an actual .NET solution. This sample
-   uses the same gate.
-2. **Skill `metadata.traits`** — gates whether an individual *skill* is offered
-   to the agent.
+Use traits at two levels:
 
-Trait expressions support `|` (OR), `&` / `+` (AND), `!` (NOT), and parentheses,
-and are case-insensitive — e.g. `"(.NET|CSharp|VisualBasic) & DotNetFramework"`.
+1. **Manifest `traits`** gates all skills contributed by the extender.
+2. **Skill `metadata.traits`** adds a gate for an individual skill.
 
-The complete catalog of discoverable traits is in
-[doc 5](05-skills-metadata-and-traits.md). Gating on the right traits is what
-makes your content appear *at the right moment* and stay out of the way
-otherwise.
+Expressions support `|` (OR), `&` / `+` (AND), `!` (NOT), and parentheses,
+and are case-insensitive. For example: `"DotNet & !Containerized"`.
 
-## 1.6 Discovery & lifecycle (what the orchestrator does for you)
+Traits govern skill availability, not MCP launch or tool access. They also do
+not gate fact-collection hooks, which help produce the traits. Configure tool
+access through host permissions, agent tool scopes, and your MCP server.
+See [doc 5](05-skills-metadata-and-traits.md) for the trait catalog.
 
-You don't write any of this — it's the contract the orchestrator fulfils:
+## 1.6 Discovery and lifecycle
 
-1. The host launches the orchestrator when the user starts the Upgrade agent.
-2. The orchestrator scans the repository and computes traits.
-3. It discovers every installed extender by finding `upgrade-extension.json`
-   manifests, then loads each extender's skills into its registry.
-4. For each enabled extender that declares an `mcp` block, it spawns the MCP as
-   a child process and proxies its tools — then surfaces those tools only while
-   the extender's `traits` gate matches the resolved trait set (re-checked when
-   a tool is called). `enabled: false` stops the extender from being spawned at
-   all.
-5. As the user works, the orchestrator filters skills and tools by trait and by
-   the active scenario, so the agent sees a focused surface.
+1. The host registers the Upgrade MCP and your independently configured MCP.
+2. The orchestrator discovers installed `upgrade-extension.json` manifests and
+   loads enabled extenders' skills and hooks.
+3. Repository scanning and fact collection produce traits.
+4. The orchestrator filters skills using extender-level and skill-level gates,
+   re-evaluating them as traits change.
+5. The agent follows the selected scenario and calls tools through the host.
+   `requires-extension` identifies scenario dependencies; it is not an MCP
+   launch instruction.
 
 ## 1.7 Bundling several extenders
 
-A single host package can carry **multiple independent extenders**. Put each one
-in its own self-contained `extenders/<name>/` folder (each with its own
-`upgrade-extension.json` and `skills/`). The orchestrator discovers every nested
-manifest. Keeping each extender self-contained means you can later split one out
-into its own package by moving the folder — no other changes.
+A host package can carry several self-contained `extenders/<name>/` folders,
+each with its own manifest and skills. Keep each folder independently usable.
+The orchestrator discovers nested manifests; VS Code packages explicitly list
+each manifest path in `contributes.upgradeExtensions`. Register any MCP servers
+through the host package's normal MCP integration.
 
 ## Next
 

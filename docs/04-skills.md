@@ -95,8 +95,10 @@ requires-extension: upgrade-fabrikam                  # single id
 - **Trait expression** — selects extenders whose declared `traits` overlap;
   `mode: "intersect-with-installed"` further restricts to installed ones.
 
-When the scenario starts, the orchestrator makes the resolved extenders' tools
-available to the agent.
+These dependencies select installed Upgrade extenders for the scenario. MCP
+registration and agent tool permissions are configured separately by the host.
+Ensure the worker executing a step has access to the tools it needs, or delegate
+that step to an agent that does.
 
 ## 4.5 `post-completion` (scenarios)
 
@@ -123,7 +125,8 @@ The agent surfaces these as suggested next steps after the scenario finishes.
    matcher. "Migrate Spring Boot 2 → 3" beats "Java migration".
 4. **One job per skill.** Split large migrations into a scenario plus focused
    guidance skills rather than one giant file.
-5. **Reference tools by bare name** so prose resolves on every host.
+5. **Identify the tool and its server.** Bare domain tool names keep prose
+   readable; use the host's registered identifiers in agent tool allowlists.
 6. **Keep facts fresh.** If a skill embeds version tables or dates, note when
    they were last verified so the agent can re-check.
 

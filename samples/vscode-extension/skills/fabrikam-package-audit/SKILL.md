@@ -17,6 +17,10 @@ metadata:
 On-demand guidance for reviewing a solution's Fabrikam package set before or
 during a v4 migration.
 
+The calling worker needs access to `detect_fabrikam_packages` and
+`plan_package_migration` from the host-registered `FabrikamUpgrade` MCP server.
+Delegate to a worker with those tools if they are outside the current tool scope.
+
 ## Steps
 
 1. Locate the package declarations: `.csproj` `<PackageReference>` items, a
