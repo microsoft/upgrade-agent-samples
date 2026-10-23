@@ -7,6 +7,11 @@ working example lives in
 Read [doc 1](01-extension-model.md) first for the manifest, skills, and trait
 gating shared across hosts. This page only adds the VS Code-specific packaging.
 
+> **VS Code, not CLI:** the Upgrade host reads `mcp` from contributed
+> `upgrade-extension.json` manifests to register peer MCP servers with VS Code.
+> The CLI plugin runtime does not use that block; see
+> [doc 2](02-copilot-cli-plugin.md) for `plugin.json` / `mcp.json` and agent YAML.
+
 ## 3.1 Folder layout
 
 ```
@@ -25,11 +30,12 @@ vscode-extension/
 
 Your VSIX is a **data contribution**: it declares where your manifest, skills,
 and MCP launch instructions live, then gets out of the way. It does **not**
-register an MCP server with VS Code — only the orchestrator does that.
+register a server itself — the **Upgrade host extension** does that from the
+manifest. The orchestrator neither launches nor proxies extender servers.
 
 ## 3.2 The `contributes.upgradeExtensions` contribution point
 
-This is the heart of the VS Code packaging. Declare one entry per extender:
+This is the heart of the VS Code packaging. Declare one manifest path per extender:
 
 ```jsonc
 {
@@ -41,54 +47,50 @@ This is the heart of the VS Code packaging. Declare one entry per extender:
   "activationEvents": [],
   "main": "./extension.js",
   "contributes": {
-    "upgradeExtensions": [
-      {
-        "id": "upgrade-fabrikam",
-        "manifest": "./upgrade-extension.json",
-        "skills": "./skills",
-        "mcp": [
-          {
-            "label": "Fabrikam-Upgrade",
-            "transport": "dnx",
-            "package": "Fabrikam.Upgrade.Mcp",
-            "prerelease": true
-          }
-        ]
-      }
-    ]
+    "upgradeExtensions": ["./upgrade-extension.json"]
   }
 }
 ```
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `id` | Yes | Must equal the `id` in `upgrade-extension.json`. |
-| `manifest` | No | Path to `upgrade-extension.json` relative to the VSIX root. Defaults to `./upgrade-extension.json`. |
-| `skills` | No | Skills directory relative to the VSIX root. Defaults to `./skills`. |
-| `hooks` | No | Reserved (future). Defaults to `./hooks`. |
-| `mcp[]` | Yes if you ship an MCP | One or more launch instructions; the orchestrator picks the first it can run. |
-
-### `mcp[]` transports
-
-| Transport | Shape | Use when |
-|-----------|-------|----------|
-| `dnx` | `{ label, transport: "dnx", package, prerelease?, source? }` | Your MCP ships as a published .NET tool. Resolved via `dotnet dnx <package>`. |
-| `exec` | `{ label, transport: "exec", command, args? }` | Your MCP is any other process. Use `${extensionPath}` to point inside the installed VSIX. |
-
-Example `exec` entry for a local dev loop:
+Each path is relative to the VSIX root. The host reads that manifest's identity,
+skill roots, and optional `mcp` block. The sample manifest contains:
 
 ```jsonc
 {
-  "label": "Fabrikam-Upgrade-Dev",
-  "transport": "exec",
-  "command": "dotnet",
-  "args": ["run", "--project", "${extensionPath}/../my-mcp-server", "--"]
+  "id": "upgrade-fabrikam",
+  "displayName": "Fabrikam Suite Upgrade",
+  "version": "1.0.0",
+  "traits": ".NET|CSharp|VisualBasic|DotNetCore",
+  "mcp": {
+    "serverName": "FabrikamUpgrade",
+    "command": "dnx",
+    "args": ["Fabrikam.Upgrade.Mcp", "--yes"],
+    "env": {
+      "FABRIKAM_LOG_LEVEL": "info"
+    }
+  }
 }
 ```
 
-> The `exec` `command` can be anything that speaks MCP over stdio (`node`,
-> `python`, a built binary, …). No MCP server code needs to live inside the VSIX
-> — point `exec`/`dnx` at wherever your server actually runs.
+The package is illustrative; replace it with your own server. `command` and
+`args` can launch any stdio MCP implementation (`dnx`, `npx`, `node`, etc.).
+For local development, use a command such as
+`dotnet run --project <absolute-path>`. For bundled files, the host resolves
+`${pluginRoot}` against the manifest's directory.
+
+The optional **`mcp.env`** map is passed to the MCP server when the VS Code
+Upgrade host launches it. For example, the block above sets
+`FABRIKAM_LOG_LEVEL=info` in the server's environment. All values are strings;
+use only variables your server understands and do not check in credentials.
+CLI plugins do not read this manifest block, including its `env`: configure
+`env` in the CLI server definition in `plugin.json` / `mcp.json` or sub-agent
+YAML instead.
+
+`serverName` is the registered tool scope, for example `FabrikamUpgrade/*`.
+When omitted it is derived from the extender id. Do not register the same server
+again in your own MCP provider unless you intentionally want another instance.
+The former contribution-object `mcp[]` transport list is not the configuration
+shown here: launch settings now live in the manifest.
 
 ## 3.3 Recommended `package.json` metadata
 
@@ -116,23 +118,25 @@ sequenceDiagram
     VSC->>HOST: activate
     HOST->>HOST: enumerate vscode.extensions.all
     Note over HOST: finds your contributes.upgradeExtensions
-    HOST->>ORCH: register + launch (only MCP VS Code sees)
+    HOST->>ORCH: register + launch system MCP
     ORCH->>ORCH: read contributed extenders, load skills, eval traits
-    ORCH->>EXT: spawn (from your mcp[] entry)
-    ORCH->>EXT: proxy tools
+    HOST->>EXT: register + launch from manifest mcp
+    VSC->>EXT: route domain tool calls directly
 ```
 
 The Upgrade host extension collects every contributed extender, hands the list
-to the orchestrator, and the orchestrator does the rest. VS Code never launches
-your MCP directly — only the orchestrator appears in the VS Code MCP UI.
+to the orchestrator for skill discovery, and registers each declared MCP
+directly with VS Code. Extender servers are peers of the orchestrator and
+appear separately in **MCP: List Servers**. Manifest trait gates filter skills,
+not MCP tool access; give each calling worker the tools it needs.
 
 ## 3.5 A note on tool names in VS Code
 
 VS Code Copilot Chat namespaces every MCP tool it registers as
-`mcp_<serverLabel>_<toolName>`. Because your tools ride through the
-orchestrator, they inherit the orchestrator's label — a tool you expose as
+`mcp_<serverLabel>_<toolName>`. Your tools use their **own registered server's**
+label, not the orchestrator's. A tool you expose as
 `detect_fabrikam_packages` reaches the model as
-`mcp_modernization_detect_fabrikam_packages`. The chat UI strips the prefix for
+`mcp_FabrikamUpgrade_detect_fabrikam_packages`. The chat UI strips the prefix for
 display. This is a VS Code presentation detail you don't control; **don't rename
 your tools to work around it.** Skill prose should refer to the bare tool name —
 every host resolves it.
@@ -140,9 +144,9 @@ every host resolves it.
 ## 3.6 Multiple extenders & self-discovery
 
 `contributes.upgradeExtensions` is an array, so one VSIX can contribute several
-extenders — point each entry at its own `./extenders/<name>/upgrade-extension.json`
-and `./extenders/<name>/skills`. Keep each folder self-contained so it can later
-be split into its own VSIX by moving the folder and its array entry.
+extenders — point each entry at its own `./extenders/<name>/upgrade-extension.json`.
+Keep each manifest beside its skills and optional MCP launch data so it can
+later be split into its own VSIX by moving the folder and its array entry.
 
 ## 3.7 Sub-agents in VS Code
 
@@ -166,8 +170,7 @@ Because the list is checked in, it can't be generated at build time: adding an
 agent file without adding its entry means the agent simply doesn't load.
 
 The rest mostly matches the CLI: you must declare `user-invocable: false`
-yourself, names must be globally unique, and an agent's own `mcp-servers` block
-is staged verbatim with no `${...}` substitution. One VS Code difference worth
+yourself, and names must be globally unique. One VS Code difference worth
 knowing: an agent-local `mcp-servers` block is **not launched by VS Code today**
 — it is honoured by the Copilot CLI agent runtime. Don't build a VS Code-only
 sub-agent around its own server. This sample ships no sub-agent; the Copilot CLI
@@ -175,11 +178,14 @@ sample does.
 
 ## 3.8 Checklist
 
-- [ ] `contributes.upgradeExtensions[].id` matches `upgrade-extension.json` `id`.
+- [ ] Each `contributes.upgradeExtensions` path resolves to a packaged manifest.
 - [ ] `activationEvents` is empty and `extension.js` is a no-op.
 - [ ] No `extensionDependencies`.
-- [ ] An `mcp[]` entry resolves on the user's machine (published `dnx` package
-      for release; `exec` for local dev).
+- [ ] Manifest `mcp.command` / `mcp.args` resolve on the user's machine, or
+      `mcp` is omitted for skills-only content.
+- [ ] The calling worker has access to the separately registered domain tools.
+- [ ] Any server environment variables are in manifest `mcp.env`, use string
+      values, and contain no secrets.
 - [ ] Skills gate on the right traits (see [doc 5](05-skills-metadata-and-traits.md)).
 - [ ] Any scenario extension declares `scope` — without it, it is never used
       (see [doc 6](06-scenario-extensions.md)).

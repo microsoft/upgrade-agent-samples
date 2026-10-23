@@ -44,7 +44,7 @@ There are **two families** of trait names you can gate on:
 
 ### In the manifest (`upgrade-extension.json`)
 
-Gate whether your extender's *tools and skills are surfaced* (this is the real
+Gate whether your extender's *skills are offered* (this is the real
 .NET extender's gate, which the sample reuses):
 
 ```jsonc
@@ -52,9 +52,10 @@ Gate whether your extender's *tools and skills are surfaced* (this is the real
   "traits": ".NET|CSharp|VisualBasic|DotNetCore" }
 ```
 
-An extender whose traits don't match still gets spawned — it just contributes
-nothing, so none of its tools or skills reach the model. To stop it being
-spawned at all, use `enabled: false`. See [doc 1 §1.5](01-extension-model.md#15-traits-and-gating).
+A non-matching extender contributes no skills. `enabled: false` disables its
+Upgrade content, not its separately registered MCP server. Native MCP
+registration and tool permissions are independent of these gates. See
+[doc 1 §1.5](01-extension-model.md#15-traits-and-gating).
 
 ### In a skill (`SKILL.md`)
 

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://aka.ms/modernize/extension-schema/v1.json",
   "title": "Upgrade extension manifest",
-  "description": "Manifest for `upgrade-extension.json` at the plugin's root. Identifies a plugin folder as an extension for the Upgrade orchestrator. The orchestrator scans the rest of the plugin folder for skills; under the proxy model the optional `mcp` field tells the orchestrator how to spawn the extender's MCP, and `enabled` / `traits` / `tools` gate which tools surface to the LLM. See doc/modernization-agent/extension-mcp-contract.md.",
+  "description": "Manifest for Upgrade content identity, skill roots, and skill trait gates. The optional mcp block is launch data for the VS Code Upgrade host, not CLI plugin MCP configuration. Copilot CLI plugins register servers through plugin.json mcpServers (inline or a referenced mcp.json) or sub-agent YAML mcp-servers. The orchestrator does not launch or proxy extender MCPs.",
   "type": "object",
   "required": ["id", "displayName", "version"],
   "additionalProperties": false,
@@ -24,10 +24,15 @@
     },
     "mcp": {
       "type": "object",
-      "description": "Optional spawn instructions for this extender's MCP. Required under the proxy model when the extender ships any tools. Omit when the extender contributes skills only.",
+      "description": "VS Code only: optional host registration and launch settings for this extender's peer MCP server. Not used by the Copilot CLI plugin runtime. Configure CLI servers in plugin.json mcpServers (inline or a referenced mcp.json) or sub-agent YAML mcp-servers instead. Omit for skills-only extenders.",
       "required": ["command"],
       "additionalProperties": false,
       "properties": {
+        "serverName": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]{0,63}$",
+          "description": "VS Code host registration name and tool scope prefix, e.g. FabrikamUpgrade. When omitted, derived from the extension id. Must be unique; Upgrade is reserved for the orchestrator."
+        },
         "command": {
           "type": "string",
           "minLength": 1,
@@ -36,22 +41,27 @@
         "args": {
           "type": "array",
           "items": { "type": "string" },
-          "description": "Arguments passed verbatim to the child. Path elements may use the `${pluginRoot}` token; the orchestrator substitutes the manifest's plugin root at spawn time."
+          "description": "Arguments for the VS Code host to pass to the server. The host resolves ${pluginRoot} against the manifest's folder. CLI native MCP configuration uses the different, case-sensitive ${PLUGIN_ROOT} token."
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Optional environment variables passed to this MCP server when launched by the VS Code Upgrade host. Values must be strings. Not used by CLI plugin MCP registration; configure env in the native CLI server definition instead. Do not commit credentials or other secrets."
         },
         "workingDirectory": {
           "type": ["string", "null"],
-          "description": "Optional working directory for the child. Same `${pluginRoot}` substitution applies. Defaults to the orchestrator's cwd when null."
+          "description": "Optional working directory for the server. The VS Code host resolves ${pluginRoot} against the manifest's folder. Null uses the host's working directory."
         }
       }
     },
     "enabled": {
       "type": "boolean",
       "default": true,
-      "description": "Extender-level kill switch. Default true. Set to false to disable the entire extender — the orchestrator will not spawn it and none of its tools will surface, regardless of `traits`."
+      "description": "Enables the extender's Upgrade content. Default true. Does not disable independently registered native MCP servers or their tools."
     },
     "traits": {
       "type": ["string", "null"],
-      "description": "Optional trait expression gating which of the extender's tools the orchestrator surfaces. Evaluated against the orchestrator's resolved ITraitsSet when building `tools/list`, and re-checked at `tools/call` as defense in depth. Until the trait set has resolved the listing is permissive (every spawned extender's tools show); once traits are known the gate is applied. This gates tool *visibility* only — it does not by itself stop the extender from being spawned (use `enabled: false` for that). Grammar: atom (`X`), OR (`X | Y`), AND (`X & Y` or `X + Y`), NOT (`!X`), parentheses. Case-insensitive. Null / empty = always applies."
+      "description": "Optional expression gating all skills from this extender, ANDed with each skill's own traits. Does not gate native MCP registration or tool calls. Grammar: atom (X), OR (X | Y), AND (X & Y or X + Y), NOT (!X), parentheses. Case-insensitive. Null / empty = always applies."
     },
     "skills": {
       "description": "Optional skill-root path(s) relative to the plugin root. When present, these roots are loaded in addition to the default `skills/` and `upgrade/skills/` directory-convention lookups — all skill layers are merged and skill-id collisions are deduped by the aggregator. Use to ship skills under a non-conventional folder or to expose multiple skill roots (e.g. shared base + scenario-specific). Paths that resolve outside the plugin root are rejected.",
@@ -64,25 +74,6 @@
           "minItems": 1
         }
       ]
-    },
-    "tools": {
-      "type": "object",
-      "description": "Optional per-tool gate overrides. Keys are the extender's own unprefixed tool names. Tools not listed inherit only the extender-level gates. A tool listed here is visible IFF the extender-level `enabled` + `traits` allow AND the per-tool `enabled` + `traits` allow (intersection).",
-      "additionalProperties": {
-        "type": "object",
-        "additionalProperties": false,
-        "properties": {
-          "enabled": {
-            "type": "boolean",
-            "default": true,
-            "description": "Per-tool kill switch. Default true. Set to false to hide a specific tool unconditionally."
-          },
-          "traits": {
-            "type": ["string", "null"],
-            "description": "Optional additional trait expression layered on top of the extender-level expression. Same grammar."
-          }
-        }
-      }
     }
   }
 }

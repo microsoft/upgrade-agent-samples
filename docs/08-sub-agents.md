@@ -21,7 +21,7 @@ surface that costs the main agent nothing.
 ```
 
 > **Skills first.** Most extenders need no sub-agent at all. Skills plus a
-> proxied MCP cover the common cases, and they compose with the orchestrator's
+> host-registered MCP cover the common cases, and they compose with the orchestrator's
 > own workers. Reach for a sub-agent when a task is genuinely a *separate job*
 > with its own tool surface — a deep dependency analysis, a bulk code
 > transformation, a domain-specific validation pass — not merely a long skill.
@@ -134,12 +134,18 @@ deliberately narrow, and anything ambiguous is **rejected** rather than guessed:
 ## 8.4 An agent may declare its own `mcp-servers`
 
 This is the point of the feature: a sub-agent can carry **its own tool surface**,
-independent of the MCP your manifest declares.
+independent of any plugin-wide MCP registration.
+
+**For CLI plugins, this YAML is an alternative to `plugin.json` / `mcp.json`
+registration.** The `mcp` block in `upgrade-extension.json` is VS Code launch
+data and does not register a CLI server. Choose plugin-wide registration when
+several workers need the tools; choose agent-local registration when only this
+worker does. Other workers must delegate to it or have their own tool access.
 
 > **Host support:** agent-local `mcp-servers` is honoured by the **Copilot CLI**
 > agent runtime. In VS Code the block is carried through but the current host
 > wiring does not launch it, and nothing warns you — extender tools reach the
-> model through the orchestrator there instead. If your sub-agent must have its
+> model through host-registered servers there instead. If your sub-agent must have its
 > own server today, target the CLI, and don't rely on VS Code picking it up.
 
 ```yaml
@@ -166,19 +172,17 @@ server's tools to expose (`["*"]` for all); the outer one scopes what the agent
 may call. Omit the inner key and the frontmatter is malformed — the agent is
 dropped.
 
-The block is staged **verbatim**: nothing parses, validates, rewrites, or
-resolves anything inside it, including tool names.
+The extender staging step copies the block; the CLI runtime interprets the
+native MCP configuration and launches the server. A `tools:` allowlist alone
+does not register a server.
 
 ### The server must be launchable in any environment
 
-Agent frontmatter is **not** a plugin manifest. It gets:
-
-- **no `${...}` substitution**,
-- **no injected plugin-root variable**, and
-- **no working directory rooted at your plugin**.
-
-So an agent **cannot launch a script shipped inside its own installed folder** —
-there is no supported way to spell that path. Declare one of these instead:
+For a plugin-shipped agent, the CLI supports its case-sensitive
+`${PLUGIN_ROOT}` token in MCP command/arguments to locate bundled files.
+Do not use the VS Code manifest's `${pluginRoot}` token here, or assume the
+working directory is your plugin folder. Published packages and executables
+already on `PATH` also avoid installation-path assumptions:
 
 | Shape | Example |
 |-------|---------|
@@ -191,9 +195,9 @@ runtime **inside its own process**. Reading a host environment variable is not a
 substitute: a variable only one host sets is `undefined` in every other one, and
 the breakage is invisible in the host that *does* set it.
 
-> This mirrors the rule for the manifest's `mcp` block ([doc 1](01-extension-model.md)),
-> with one difference worth remembering: the manifest **does** support
-> `${pluginRoot}`; agent frontmatter **does not**.
+> The two spellings belong to different registration paths:
+> `${PLUGIN_ROOT}` in CLI plugin/agent MCP configuration; `${pluginRoot}` in
+> VS Code manifest `mcp` data ([doc 1](01-extension-model.md)).
 
 ## 8.5 `tools/` — helper files beside your agents
 
@@ -230,10 +234,10 @@ someone else's trusted install, and it blocks you the moment you try to bundle.
       you own.
 - [ ] The file name is prefixed the same way and matches nothing else you ship.
 - [ ] Each `mcp-servers` entry has its own inner `tools:` key and a `type:`.
-- [ ] Any `mcp-servers` entry names a package runner, a remote server, or a
-      `PATH` executable — never a path inside the installed folder.
+- [ ] Each server is launchable via a package runner, remote endpoint, `PATH`
+      executable, or a bundled path resolved with CLI's `${PLUGIN_ROOT}`.
 - [ ] Anything depending on agent-local `mcp-servers` targets Copilot CLI.
-- [ ] No `${...}` tokens anywhere in the frontmatter.
+- [ ] No VS Code `${pluginRoot}` token in CLI MCP configuration.
 - [ ] `tools/`, if present, contains only `.cjs`, `.js`, `.mjs`, `.json`, `.md`.
 - [ ] The agent body is written to the sizing guidance in
       [doc 7](07-instruction-size-and-tokens.md).

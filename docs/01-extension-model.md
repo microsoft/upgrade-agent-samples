@@ -2,7 +2,8 @@
 
 This page explains how an extender plugs into the Upgrade agent. The model is
 **host-agnostic**: the same manifest, skills, and tool surface work whether you
-ship a Copilot CLI plugin or a VS Code extension. The host-specific packaging is
+ship a Copilot CLI plugin or a VS Code extension. MCP registration is
+**host-specific**, not part of the shared skill-discovery path. Packaging is
 covered in docs [2](02-copilot-cli-plugin.md) and [3](03-vscode-extension.md).
 
 ## 1.1 Topology
@@ -11,7 +12,7 @@ covered in docs [2](02-copilot-cli-plugin.md) and [3](03-vscode-extension.md).
 flowchart TB
     HOST["Host<br/>(Copilot CLI / VS Code)"]
     ORCH["Upgrade orchestrator MCP"]
-    HOST -- "launches (the only MCP it sees)" --> ORCH
+    HOST -- "launches system MCP" --> ORCH
 
     subgraph Installed["Installed extenders"]
         E1["upgrade-fabrikam/<br/>upgrade-extension.json<br/>skills/<br/>(MCP)"]
@@ -20,31 +21,42 @@ flowchart TB
 
     ORCH -- "discovers manifests" --> Installed
     ORCH -- "loads skills into its registry" --> Installed
-    ORCH -- "spawns + proxies MCP" --> E1
-    ORCH -- " " --> E2
+    HOST -- "registers + launches peer MCP" --> E1
+    HOST -- "registers + launches peer MCP" --> E2
     ORCH -- "scans repo → traits" --> REPO["Target repository"]
-    ORCH -- "proxied tools + filtered skills" --> LLM["Agent / LLM"]
+    ORCH -- "system tools + filtered skills" --> LLM["Agent / LLM"]
+    HOST -- "routes extender tool calls directly" --> Installed
 ```
 
-**Key invariant.** The host launches **only the orchestrator**. Your extender's
-MCP server is **never launched by the host directly** — the orchestrator
-discovers your manifest, spawns your MCP as a child process, and proxies its
-tools. This is why the manifest, not the host package, is the source of truth
-for your extender.
+**Key invariant.** Extender MCPs are **peers of the orchestrator**, not its
+children. The host launches them and routes their tool calls directly. The
+orchestrator discovers manifests and loads skills; it does not proxy domain
+tools.
+
+| Host / scope | Where to declare MCP servers |
+|--------------|------------------------------|
+| Copilot CLI, plugin-wide | `plugin.json` → `mcpServers`, inline or pointing to a separate `mcp.json`. |
+| Copilot CLI, agent-local | The sub-agent's YAML `mcp-servers` block. |
+| VS Code Upgrade extender | `upgrade-extension.json` → `mcp`; the Upgrade host registers the server with VS Code. |
+
+**The `mcp` block in `upgrade-extension.json` is not used by standalone CLI
+plugins.** Copying it into a CLI extender does not register or launch a server.
+Use one of the CLI registration locations above instead. Build tooling for
+extenders bundled into the Upgrade product may generate host registrations from
+manifests; that is a packaging step, not CLI runtime discovery of this block.
 
 ## 1.2 What an extender contributes
 
 | Surface | Required? | What it is |
 |---------|-----------|------------|
-| **Manifest** (`upgrade-extension.json`) | Yes | Identifies the folder as an extender; declares id/version, MCP launch, trait gates. |
+| **Manifest** (`upgrade-extension.json`) | Yes | Identifies the extender; declares id/version, skill trait gates and optional VS Code MCP launch data. |
 | **Skills** (`skills/`) | Recommended | Markdown scenarios, on-demand guidance, and **scenario extensions** the agent follows. An extender can be skills-only. |
 | **MCP server** | Optional | A process exposing tools the agent calls. Omit if your extender is skills-only. |
 | **Sub-agents** (`agents/`) | Optional | Hidden `*.agent.md` worker agents the orchestrator dispatches by name. Each may declare **its own** `mcp-servers`. See [doc 8](08-sub-agents.md). |
 | **Hooks** | Reserved | Folder reserved for a future hooks runtime. Not yet active. |
 
 A useful extender is usually **skills + an MCP server**, but **skills-only**
-extenders are fully supported — drop the `mcp` block from the manifest and ship
-no MCP project.
+extenders are fully supported — omit MCP registration and ship no MCP project.
 
 Skills come in a few shapes, and the shape decides *when* your guidance reaches
 the agent. Pick per piece of content — most extenders ship a mix:
@@ -75,42 +87,46 @@ A single JSON file at the root of your extender folder. Minimal form:
 }
 ```
 
-Full form with an MCP and trait gating:
+Shared form with skill trait gating (works on both hosts):
 
 ```jsonc
 {
   "id": "upgrade-fabrikam",
   "displayName": "Fabrikam Suite Upgrade",
   "version": "1.0.0",
-  "traits": ".NET|CSharp|VisualBasic|DotNetCore",
-  "mcp": {
-    "command": "dnx",
-    "args": ["Fabrikam.Upgrade.Mcp", "--yes"]
-  }
+  "traits": ".NET|CSharp|VisualBasic|DotNetCore"
 }
 ```
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `id` | Yes | Globally unique, lowercase, hyphenated (`^[a-z][a-z0-9-]{2,63}$`). This is the value scenarios reference in `requires-extension`, and the prefix the orchestrator uses on tool-name collisions. |
+| `id` | Yes | Globally unique, lowercase, hyphenated (`^[a-z][a-z0-9-]{2,63}$`). Scenarios reference it in `requires-extension`. |
 | `displayName` | Yes | Human-readable name shown in diagnostics. |
 | `version` | Yes | SemVer of your extender, independent of the orchestrator. |
-| `mcp` | No | How to launch your MCP. Omit for skills-only extenders. See below. |
-| `enabled` | No | Extender-level kill switch (default `true`). |
-| `traits` | No | A trait expression gating the whole extender. Empty/omitted = always applies. See §1.5. |
+| `mcp` | No | **VS Code only:** host MCP registration/launch settings. **Ignored for CLI plugin MCP registration.** See below. |
+| `enabled` | No | Enables Upgrade content (default `true`); does not disable separately registered MCP servers. |
+| `traits` | No | A trait expression gating the extender's skills, not its MCP tools. Empty/omitted = always applies. See §1.5. |
 | `skills` | No | Extra skill-root path(s) relative to the manifest, merged with the conventional `skills/` lookup. |
-| `tools` | No | Per-tool gate overrides keyed by your bare tool names. |
 
 > The full machine-readable schema is mirrored at
 > [`docs/upgrade-extension.schema.json`](upgrade-extension.schema.json). Point
 > your editor's JSON validation at it for IntelliSense.
 
-### The `mcp` block
+### The `mcp` block (VS Code only, not CLI plugin configuration)
+
+The VS Code Upgrade host reads this block from contributed manifests and
+registers each server directly with VS Code. It does not make the orchestrator
+launch or proxy the server. For CLI registration, use
+[doc 2](02-copilot-cli-plugin.md), not this block.
 
 ```jsonc
 "mcp": {
+  "serverName": "FabrikamUpgrade",          // host registration / tool scope
   "command": "dnx",                        // launcher: dnx, npx, dotnet, node, …
-  "args": ["Fabrikam.Upgrade.Mcp", "--yes"],     // passed verbatim to the child
+  "args": ["Fabrikam.Upgrade.Mcp", "--yes"],
+  "env": {
+    "FABRIKAM_LOG_LEVEL": "info"            // optional server environment
+  },
   "workingDirectory": null                 // optional; ${pluginRoot} token allowed
 }
 ```
@@ -119,8 +135,20 @@ Full form with an MCP and trait gating:
 requirement to ship server code alongside the manifest. Common forms: `dnx`
 (a published .NET tool), `npx -y <package>` (a published npm package), or a
 direct `dotnet`/`node` invocation. Path arguments may use the `${pluginRoot}`
-token, which the orchestrator replaces with your extender's folder at spawn
-time.
+token, which the VS Code host resolves against the manifest's folder.
+Do not confuse it with CLI's case-sensitive `${PLUGIN_ROOT}` token in native
+plugin MCP configuration.
+
+The optional `mcp.env` object supplies environment variables to **that MCP
+server when VS Code launches it**. Use string values, including for booleans
+or numbers, and never commit credentials or other secrets. Like the rest of
+manifest `mcp`, this block is **not used by CLI plugins**: put CLI server
+environment variables in the native server definition's `env` in
+`plugin.json` / `mcp.json` or sub-agent YAML instead.
+
+An agent's tool allowlist must include the registered server's tools (for
+example `FabrikamUpgrade/*`). An allowlist grants tool scope; it does not
+register or launch a server.
 
 ## 1.4 Skills layout
 
@@ -144,7 +172,9 @@ The skills folder convention depends on the host:
       └── fabrikam-dependency-validation.agent.md   # optional sub-agent (doc 8)
   ```
 
-- **VS Code extension** — place skills under `skills/` at the extension root (declared via `"skills": "./skills"` in the `contributes.upgradeExtensions` entry):
+- **VS Code extension** — place skills under `skills/` beside the contributed
+  `upgrade-extension.json`. For a non-conventional location, declare `skills`
+  in that manifest, not in the `contributes.upgradeExtensions` path list:
 
   ```
   <extension-root>/
@@ -173,11 +203,10 @@ analysis (`.NET`, `CSharp`, `DotNetCore`, `DotNetFramework`). You use traits in
 two places:
 
 1. **Manifest `traits`** — the outer gate. It decides whether your extender's
-   *tools and skills are surfaced at all*. An extender whose traits don't match
-   stays spawned but contributes neither. (Use `enabled: false` to stop it being
-   spawned at all.) A .NET-oriented extender gates on something like
-   `".NET|CSharp|VisualBasic|DotNetCore"`, so its tools appear only for an
-   actual .NET solution. This sample uses the same gate.
+   *skills are offered*. A non-matching extender contributes no skills.
+   `enabled: false` disables Upgrade content, not independently registered MCP
+   servers. A .NET-oriented extender can use
+   `".NET|CSharp|VisualBasic|DotNetCore"`; this sample uses the same gate.
 2. **Skill `metadata.traits`** — an inner gate that narrows further. It is
    **ANDed** with the manifest gate, so a skill is offered only when *both*
    evaluate true; an empty expression on either side passes. A skill can't
@@ -185,6 +214,9 @@ two places:
 
 Trait expressions support `|` (OR), `&` / `+` (AND), `!` (NOT), and parentheses,
 and are case-insensitive — e.g. `"(.NET|CSharp|VisualBasic) & DotNetFramework"`.
+
+Neither trait gate restricts native MCP tool registration or calls. Tool access
+is controlled by the host's permissions and each calling agent's tool scope.
 
 The complete catalog of discoverable traits is in
 [doc 5](05-skills-metadata-and-traits.md). Gating on the right traits is what
@@ -199,13 +231,10 @@ You don't write any of this — it's the contract the orchestrator fulfils:
 2. The orchestrator scans the repository and computes traits.
 3. It discovers every installed extender by finding `upgrade-extension.json`
    manifests, then loads each extender's skills into its registry.
-4. For each enabled extender that declares an `mcp` block, it spawns the MCP as
-   a child process and proxies its tools — then surfaces those tools only while
-   the extender's `traits` gate matches the resolved trait set (re-checked when
-   a tool is called). `enabled: false` stops the extender from being spawned at
-   all.
-5. As the user works, the orchestrator filters skills and tools by trait and by
-   the active scenario, so the agent sees a focused surface.
+4. Separately, the host registers and launches domain MCPs from its own
+   configuration: CLI plugin/agent settings, or VS Code's manifest `mcp` data.
+5. As the user works, the orchestrator filters skills by traits and the active
+   scenario. The host routes domain tool calls directly to their servers.
 
 ## 1.7 Bundling several extenders
 

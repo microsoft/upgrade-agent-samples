@@ -25,7 +25,14 @@ You package an extender for a host:
 
 Both hosts use the **same extender contract** — the same `upgrade-extension.json`
 manifest, the same skills format, and the same MCP tool surface. Only the
-packaging differs.
+packaging and MCP registration differ.
+
+> **Where to configure MCP servers:** Copilot CLI does **not** use the `mcp`
+> block in `upgrade-extension.json`. Register plugin-wide servers in
+> `plugin.json` (`mcpServers`, inline or pointing to `mcp.json`), or agent-local
+> servers in a sub-agent's YAML `mcp-servers`. The manifest's `mcp` block is used
+> by the **VS Code Upgrade host** to register extender servers. Neither host
+> routes extender tool calls through the orchestrator.
 
 ## What's in here
 
@@ -74,18 +81,20 @@ flowchart LR
         A["agents/<br/>(sub-agents, optional)"]
     end
     P["Host package<br/>(plugin.json / package.json)"] --> Extender
-    Extender --> ORCH["Upgrade orchestrator"]
+    M --> ORCH["Upgrade orchestrator"]
+    S --> ORCH
+    P -. "native MCP registration" .-> T
     ORCH --> LLM["Agent / LLM"]
 ```
 
 1. **Host package** — `plugin.json` (CLI) or `package.json` (VS Code) that
    installs your extender into the host.
 2. **Manifest** — `upgrade-extension.json` declares your extender id, version,
-   and (optionally) how to launch your MCP and which traits gate it.
+   skill trait gates, and (for VS Code only) optional MCP launch settings.
 3. **Skills** — Markdown files with metadata that the orchestrator loads and
    surfaces to the agent.
-4. **MCP server** — an optional process exposing tools; the orchestrator spawns
-   and proxies it.
+4. **MCP server** — an optional process exposing tools; the host launches it as
+   a peer of the orchestrator and routes tool calls directly to it.
 5. **Traits** — facts the orchestrator discovers about the target repository;
    you reference them in skill metadata so your content appears only when
    relevant.

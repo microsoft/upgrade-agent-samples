@@ -4,5 +4,14 @@
   "description": "Fabrikam Suite Upgrade — sample modernization extender that migrates the Fabrikam component suite from v3 to v4 (package renames + version bumps). Reference implementation of the Upgrade extender contract.",
   "author": { "name": "Fabrikam" },
   "license": "MIT",
-  "keywords": ["modernize", "copilot", "upgrade", "modernization", "dotnet", "nuget"]
+  "keywords": ["modernize", "copilot", "upgrade", "modernization", "dotnet", "nuget"],
+  "mcpServers": {
+    "FabrikamUpgrade": {
+      "type": "local",
+      "command": "dnx",
+      "args": ["Fabrikam.Upgrade.Mcp", "--yes"],
+      "tools": ["*"],
+      "timeout": 300000
+    }
+  }
 }
