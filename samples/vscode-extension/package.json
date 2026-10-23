@@ -10,20 +10,6 @@
   "main": "./extension.js",
   "activationEvents": [],
   "contributes": {
-    "upgradeExtensions": [
-      {
-        "id": "upgrade-fabrikam",
-        "manifest": "./upgrade-extension.json",
-        "skills": "./skills",
-        "mcp": [
-          {
-            "label": "Fabrikam-Upgrade",
-            "transport": "dnx",
-            "package": "Fabrikam.Upgrade.Mcp",
-            "prerelease": true
-          }
-        ]
-      }
-    ]
+    "upgradeExtensions": ["./upgrade-extension.json"]
   }
 }

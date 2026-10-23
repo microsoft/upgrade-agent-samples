@@ -48,10 +48,13 @@ Notes for extenders reading this sample:
 - `description` is the dispatch trigger: it is what the calling agent sees when
   deciding whether to hand work over, so it names *when* to use this agent, not
   just what it is.
-- `mcp-servers` is staged **verbatim**. It gets no `${...}` substitution and no
-  plugin-root working directory, so `command` must be a package runner (`dnx`,
-  `npx`, `uvx`), a remote server, or something already on `PATH` — never a path
-  inside this installed folder. Note the inner `tools:` key, which is required
+- `mcp-servers` registers this server only for this CLI worker, independently
+  of the plugin-wide server in `plugin.json`. The Upgrade manifest's `mcp`
+  block is not a CLI registration source. A package runner (`dnx`, `npx`,
+  `uvx`), remote server, or executable on `PATH` avoids installation-path
+  assumptions. For bundled files, use CLI's case-sensitive `${PLUGIN_ROOT}`,
+  not VS Code's `${pluginRoot}`, and do not assume a plugin-root working
+  directory. Note the inner `tools:` key, which is required
   per server and is separate from the agent-level `tools:` list. Agent-local
   `mcp-servers` is honoured by Copilot CLI; VS Code does not launch it today.
 - Both the file name and `name:` are prefixed with `fabrikam-` because agents
